@@ -7,6 +7,7 @@ from app.api.chat import router as chat_router
 from app.api.metrics import router as metrics_router
 from app.api.forecast import router as forecast_router
 from app.api.monitor import router as monitor_router
+from app.api.dataease import router as dataease_router
 from app.api.portfolio import router as portfolio_router
 from app.api.graph import router as graph_router
 from fastapi.middleware.cors import CORSMiddleware
@@ -32,3 +33,4 @@ app.include_router(forecast_router)
 app.include_router(monitor_router)
 app.include_router(portfolio_router)
 app.include_router(graph_router)
+app.include_router(dataease_router)

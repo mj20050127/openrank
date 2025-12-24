@@ -26,6 +26,8 @@ export default function App() {
   const [status, setStatus] = useState("就绪");
   const [openrankPoints, setOpenrankPoints] = useState([]);
   const [activityPoints, setActivityPoints] = useState([]);
+  const [embedUrl, setEmbedUrl] = useState("");
+  const [embedStatus, setEmbedStatus] = useState("等待触发");
 
   const openrankLast = useMemo(() => latest(openrankPoints), [openrankPoints]);
   const activityLast = useMemo(() => latest(activityPoints), [activityPoints]);
@@ -64,6 +66,28 @@ export default function App() {
     } catch (e) {
       console.error(e);
       setStatus("失败 ❌ " + e.message);
+    }
+  }
+
+  async function bootstrapDashboard() {
+    if (!repo.includes("/")) {
+      setEmbedStatus("失败 ❌ repo 格式应为 owner/repo");
+      return;
+    }
+    try {
+      setEmbedStatus("Agent 正在调用 DataEase 接口...");
+      const res = await fetch("/api/dataease/bootstrap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ repo })
+      });
+      if (!res.ok) throw new Error(`后端返回 ${res.status}`);
+      const data = await res.json();
+      setEmbedUrl(data.embed_url || "");
+      setEmbedStatus(data.created ? "完成 ✅ 已新建" : "复用 ✅ 已存在");
+    } catch (e) {
+      console.error(e);
+      setEmbedStatus("失败 ❌ " + e.message);
     }
   }
 
@@ -111,6 +135,26 @@ export default function App() {
           <div style={{ color: "#666", fontSize: 13 }}>Activity 趋势</div>
           <ReactECharts option={activityOption} style={{ height: 360 }} />
         </div>
+      </div>
+
+      <div style={{ marginTop: 24, border: "1px solid #ddd", borderRadius: 12, padding: 16 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <div>
+            <div style={{ fontSize: 16, fontWeight: 700 }}>DataEase 健康总览大屏（DIV 嵌入）</div>
+            <div style={{ color: "#666", fontSize: 13 }}>自动创建数据源/数据集/大屏，返回可嵌入链接</div>
+          </div>
+          <button onClick={bootstrapDashboard} style={{ padding: "10px 14px", borderRadius: 10, border: 0, background: "#111", color: "#fff" }}>
+            一键生成/复用大屏
+          </button>
+          <div style={{ color: "#666" }}>状态：{embedStatus}</div>
+        </div>
+        {embedUrl ? (
+          <div style={{ marginTop: 12, border: "1px solid #ccc", borderRadius: 10, overflow: "hidden" }}>
+            <iframe src={embedUrl} title="DataEase-Health" style={{ width: "100%", height: 520, border: "none" }} allowFullScreen />
+          </div>
+        ) : (
+          <div style={{ marginTop: 12, color: "#888" }}>还没有可嵌入链接，点击上方按钮自动生成</div>
+        )}
       </div>
     </div>
   );

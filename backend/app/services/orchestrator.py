@@ -11,6 +11,7 @@ from app.schemas.requests import ChatRequest
 from app.schemas.output_schema import OutputSchema, Summary, Chart, ActionItem
 from app.tools.opendigger_client import OpenDiggerClient
 from app.tools.dataease_client import build_dashboard_link
+from app.services.dataease_bootstrap import DataEaseBootstrapService
 from app.db.models import MetricPoint
 from app.services.snapshot import build_snapshot
 from app.services.evidence import build_evidence_cards
@@ -119,7 +120,11 @@ def run(req: ChatRequest, intent: dict, db: Session) -> OutputSchema:
         )
     links: list[str] = []
     if settings.DATAEASE_BASE_URL:
-        links.append(build_dashboard_link(settings.DATAEASE_BASE_URL, repo))
+        try:
+            bootstrap_result = DataEaseBootstrapService().bootstrap(db, repo)
+            links.append(bootstrap_result.binding.embed_url)
+        except Exception:
+            links.append(build_dashboard_link(settings.DATAEASE_BASE_URL, repo))
 
     output = OutputSchema(
         request_id=f"req_{uuid4().hex}",
