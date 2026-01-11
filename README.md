@@ -35,10 +35,12 @@ $$ \text{HealthScore} = 0.30 V + 0.25 R + 0.20 Re + 0.15 G + 0.10 S $$
 
 - **Vitality (活跃度 30%)**:  
   综合 OpenRank 影响力、Activity 活跃量（对数评分）、社区参与人数与增长率。
-  $$ \text{Score}\_V = \ln(1 + \text{OpenRank}) \times w_1 + \dots $$
+
+$$ \text{Score}\_V = \ln(1 + \text{OpenRank}) \times w_1 + \dots $$
 - **Responsiveness (响应度 25%)**:  
   基于 **时间衰减函数** $T(h)$ 评估 Issue/PR 的首响时间、关闭周期与积压率。
-  $$ T(h) = \max(0, 100 \times \frac{\text{bad} - h}{\text{bad} - \text{good}}) $$
+
+$$ T(h) = \max(0, 100 \times \frac{\text{bad} - h}{\text{bad} - \text{good}}) $$
 - **Resilience (韧性 20%)**:  
   结合 Bus Factor（总线因子）、贡献者多样性 (HHI 指数) 与留存率，评估项目抗风险能力。
 - **Governance (治理 15%)**:  
@@ -74,7 +76,8 @@ $$ \text{HealthScore} = 0.30 V + 0.25 R + 0.20 Re + 0.15 G + 0.10 S $$
 
 - **算法驱动推荐**：
   基于用户的 **技术栈**、**时间投入** 与 **兴趣领域**，结合项目的 **Readiness Score**（新人准备度），计算最佳匹配度。
-  $$ \text{Match} = 0.55 \times \text{Fit} + 0.45 \times \text{Readiness} $$
+
+$$ \text{Match} = 0.55 \times \text{Fit} + 0.45 \times \text{Readiness} $$
 - **可执行任务清单**：
   自动挖掘项目中的 `good_first_issue` 或 `help_wanted` 任务，并生成定制化的 **Onboarding Checklist**（环境搭建、文档阅读、测试运行），帮助新人将 Ready-to-Code 时间缩短至周级别。
 
@@ -90,7 +93,8 @@ $$ \text{HealthScore} = 0.30 V + 0.25 R + 0.20 Re + 0.15 G + 0.10 S $$
 
 - **趋势判定算法**：
   使用 **最小二乘法 (Least Squares)** 线性回归计算关键指标（如 OpenRank、响应时间）的斜率 $k$，判定 Rising/Falling 趋势。
-  $$ k = \frac{N \sum xy - \sum x \sum y}{N \sum x^2 - (\sum x)^2} $$
+
+$$ k = \frac{N \sum xy - \sum x \sum y}{N \sum x^2 - (\sum x)^2} $$
 - **异常检测**：
   基于 **Z-Score** 识别数据突变，结合业务阈值（如 "PR 首响 > 48h"、"Top1 份额 > 50%"）自动触发风险提示。
 - **可视化报告**：
