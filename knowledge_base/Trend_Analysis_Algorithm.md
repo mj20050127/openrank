@@ -57,9 +57,17 @@
 
 为适配非平稳时序（指标量级随时间变化、存在季节性或结构性突变），系统支持基于滑动窗口 $w$ 的动态归一化，用于趋势拟合与异常检测的前置预处理。
 
-- **Z-Score 动态归一化**：
-  $$ z_t = \frac{y_t - \mu_{t-w:t}}{\sigma_{t-w:t}} $$
-  其中 $\mu_{t-w:t}$、$\sigma_{t-w:t}$ 分别为窗口 $[t-w, t]$ 内的均值与标准差。
+- **Z-Score 动态归一化**:
+
+$$z_t = \frac{y_t - \mu_{t-w:t}}{\sigma_{t-w:t}}$$
+其中
+
+$\mu_{t-w:t}$、
+$\sigma_{t-w:t}$ 
+分别为窗口
+
+$[t-w, t]$ 
+内的统计值。
 
 窗口长度 $w$ 的典型取值：7（日维平滑、快速响应）与 30（月度尺度、抗噪更强），与上文 Rolling Statistics 保持一致。
 
@@ -82,8 +90,8 @@
 
 基于查询到的时序数据总和计算：
 
-- **Issue Closure Ratio**: $\sum(\text{issues\_closed}) / \sum(\text{issues\_new})$
-- **PR Merge Ratio**: $\sum(\text{change\_requests\_accepted}) / \sum(\text{prs\_new})$
+- **Issue Closure Ratio**: $\sum(\text{issues\\_closed}) / \sum(\text{issues\\_new})$
+- **PR Merge Ratio**: $\sum(\text{change\\_requests\\_accepted}) / \sum(\text{prs\\_new})$
 
 ### 2.2 自动诊断规则 (Hardcoded Diagnosis)
 
