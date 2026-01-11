@@ -68,9 +68,14 @@ $$ \text{FitScore} = 40 \times \text{DomainHit} + 35 \times \text{StackHit} + 25
 
 3.  **Supply (25%)**:
 
-    - 计算“任务供给量”：$S = 2 \times \text{good\_first} + 1.5 \times \text{help\_wanted} + 1.0 \times \text{docs} + 1.0 \times \text{i18n}$
-    - 对数处理后归一化：$Score = \text{Norm}(\ln(1+S))$
-    - **新鲜度修正**: 乘以 `freshness_factor` (0.6~1.0)，Issue 越新得分越高。
+计算“任务供给量”：
+
+$S = 2 \times \text{good\\_first} + 1.5 \times \text{help\\_wanted} + 1.0 \times \text{docs} + 1.0 \times \text{i18n}$
+  - 对数处理后归一化：
+
+$Score = \text{Norm}(\ln(1+S))$
+  - **新鲜度修正**: 乘以 `freshness_factor` (0.6~1.0)，Issue 越新得分越高。
+  - **新鲜度修正**: ...
 
 4.  **Onboarding (20%)**:
     - README 存在: +30

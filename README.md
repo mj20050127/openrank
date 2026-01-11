@@ -35,10 +35,12 @@ $$ \text{HealthScore} = 0.30 V + 0.25 R + 0.20 Re + 0.15 G + 0.10 S $$
 
 - **Vitality (活跃度 30%)**:  
   综合 OpenRank 影响力、Activity 活跃量（对数评分）、社区参与人数与增长率。
-  $$ \text{Score}\_V = \ln(1 + \text{OpenRank}) \times w_1 + \dots $$
+
+$$ \text{Score}\_V = \ln(1 + \text{OpenRank}) \times w_1 + \dots $$
 - **Responsiveness (响应度 25%)**:  
   基于 **时间衰减函数** $T(h)$ 评估 Issue/PR 的首响时间、关闭周期与积压率。
-  $$ T(h) = \max(0, 100 \times \frac{\text{bad} - h}{\text{bad} - \text{good}}) $$
+
+$$ T(h) = \max(0, 100 \times \frac{\text{bad} - h}{\text{bad} - \text{good}}) $$
 - **Resilience (韧性 20%)**:  
   结合 Bus Factor（总线因子）、贡献者多样性 (HHI 指数) 与留存率，评估项目抗风险能力。
 - **Governance (治理 15%)**:  
@@ -74,7 +76,8 @@ $$ \text{HealthScore} = 0.30 V + 0.25 R + 0.20 Re + 0.15 G + 0.10 S $$
 
 - **算法驱动推荐**：
   基于用户的 **技术栈**、**时间投入** 与 **兴趣领域**，结合项目的 **Readiness Score**（新人准备度），计算最佳匹配度。
-  $$ \text{Match} = 0.55 \times \text{Fit} + 0.45 \times \text{Readiness} $$
+
+$$ \text{Match} = 0.55 \times \text{Fit} + 0.45 \times \text{Readiness} $$
 - **可执行任务清单**：
   自动挖掘项目中的 `good_first_issue` 或 `help_wanted` 任务，并生成定制化的 **Onboarding Checklist**（环境搭建、文档阅读、测试运行），帮助新人将 Ready-to-Code 时间缩短至周级别。
 
@@ -90,7 +93,8 @@ $$ \text{HealthScore} = 0.30 V + 0.25 R + 0.20 Re + 0.15 G + 0.10 S $$
 
 - **趋势判定算法**：
   使用 **最小二乘法 (Least Squares)** 线性回归计算关键指标（如 OpenRank、响应时间）的斜率 $k$，判定 Rising/Falling 趋势。
-  $$ k = \frac{N \sum xy - \sum x \sum y}{N \sum x^2 - (\sum x)^2} $$
+
+$$ k = \frac{N \sum xy - \sum x \sum y}{N \sum x^2 - (\sum x)^2} $$
 - **异常检测**：
   基于 **Z-Score** 识别数据突变，结合业务阈值（如 "PR 首响 > 48h"、"Top1 份额 > 50%"）自动触发风险提示。
 - **可视化报告**：
@@ -209,32 +213,153 @@ docker compose down
 ## 项目结构
 
 ```text
-OpenSODA-OSS-Copilot/
-├── backend/                  # FastAPI + Agent 编排 + ETL + 监控
-│   ├── app/
-│   │   ├── main.py           # FastAPI 入口
-│   │   ├── api/              # health/metrics/forecast/monitor/portfolio/graph
-│   │   ├── core/             # 配置与日志
-│   │   ├── db/               # SQLAlchemy、模型与迁移
-│   │   ├── jobs/             # APScheduler 定时任务
-│   │   ├── tools/            # OpenDigger/DataEase/EasyGraph/LLM 适配
-│   │   └── tests/            # 回归测试
-│   ├── requirements.txt
-│   ├── Dockerfile
-│   └── run_dev.bat           # Windows 本地开发脚本（可选）
-├── ui-react/                 # React + Vite 前端
-│   ├── src/
-│   ├── package.json
-│   └── vite.config.js
-├── frontend/                 # 另一个轻量前端（可选）
-├── dashboards/               # DataEase 数据集 SQL 与 README
-├── graph_lab/                # 图分析实验区（可选加分项）
-├── scripts/                  # 数据种子与 ETL 脚本
-├── data/                     # demo 组合、种子与缓存
-├── docker-compose.db.yml     # 仅数据库
-├── docker-compose.yml        # 后端 + DB + Redis（可选）
-├── Makefile                  # make up/demo/down（可选）
-└── README.md
+OpenSage/
+├── README.md                  # 项目说明与使用指南
+├── LICENSE                    # MIT 许可证
+├── Makefile                   # 快速启动/演示/停止的 make 任务
+├── docker-compose.yml         # 后端/数据库等服务编排
+├── docker-compose.db.yml      # 仅数据库（PostgreSQL）编排
+├── image/                     # 项目截图资源（README 展示）
+├── knowledge_base/            # 算法与方法论文档
+│   ├── Health_Score_Algorithm.md         # 五维健康度算法说明
+│   ├── Recommendation_Algorithm.md       # 新人推荐算法说明
+│   └── Trend_Analysis_Algorithm.md       # 趋势分析算法说明
+├── dashboards/                # DataEase 数据集与说明
+│   ├── README.md                          # 大屏集成说明
+│   └── datasets/
+│       ├── kpi_cards.sql                  # 关键指标卡片数据集
+│       ├── top10_attention.sql            # Top10 关注度榜单数据集
+│       ├── top10_growth.sql               # Top10 增长榜单数据集
+│       └── trend_metric.sql               # 趋势监控相关数据集
+├── data/                      # 演示数据与缓存
+│   ├── demo_portfolio.json               # 示例组合数据
+│   ├── repo_catalog_seed.csv            # 项目目录种子数据
+│   ├── cache/                            # 运行时缓存目录
+│   └── pg_data/                          # PostgreSQL 数据目录
+├── frontend/                  # 轻量静态前端（可选）
+│   ├── index.html                        # 静态首页
+│   ├── package.json                      # 前端依赖清单
+│   └── package-lock.json                 # 依赖锁定文件
+├── scripts/                   # 初始化与演示脚本
+│   ├── import_seed.sh                    # 导入种子数据脚本
+│   ├── run_demo.sh                       # 演示环境一键运行
+│   └── setup_db.sh                       # 初始化数据库脚本
+├── backend/                   # FastAPI 后端 + Agent 引擎
+│   ├── Dockerfile                          # 后端镜像构建脚本
+│   ├── requirements.txt                    # Python 依赖清单
+│   ├── repos.txt                           # 监控/分析的仓库列表
+│   ├── run_dev.bat                         # Windows 本地开发启动
+│   ├── run_dev.sh                          # Linux/macOS 本地开发启动
+│   └── app/
+│       ├── __init__.py                        # 包初始化
+│       ├── main.py                          # 应用入口（路由注册、启动钩子）
+│       ├── registry.py                      # 组件注册/工厂
+│       ├── api/               # 业务接口层
+│       │   ├── __init__.py                   # API 包初始化
+│       │   ├── agent.py                      # Agent 路由（任务编排入口）
+│       │   ├── ai.py                         # AI 服务路由（生成/分析）
+│       │   ├── api.py                        # API 聚合/公共路由
+│       │   ├── chat.py                       # 对话接口（聊天/问答）
+│       │   ├── dataease.py                   # DataEase 集成路由
+│       │   ├── forecast.py                   # 预测模块占位路由（/api/todo）
+│       │   ├── graph.py                      # 图分析占位路由（/api/todo）
+│       │   ├── health.py                     # 健康检查（/health）
+│       │   ├── health_overview.py            # 健康概览查询路由
+│       │   ├── iot_api.py                    # IoTDB 相关接口
+│       │   ├── metrics.py                    # 指标查询/聚合路由
+│       │   ├── monitor.py                    # 监控占位路由（/api/todo）
+│       │   ├── newcomer.py                   # 新人推荐/行动计划路由
+│       │   ├── portfolio.py                  # 组合占位路由（/api/todo）
+│       │   ├── risk_viability.py             # 风险韧性指标路由
+│       │   └── trends.py                     # 趋势分析路由
+│       ├── core/              # 基础设施（配置、日志）
+│       │   ├── __init__.py                   # 包初始化
+│       │   ├── config.py                     # 配置加载与常量
+│       │   └── logging.py                    # 日志初始化
+│       ├── db/                # 数据访问层
+│       │   ├── __init__.py                   # 包初始化
+│       │   ├── base.py                       # 会话/依赖注入（SQLAlchemy）
+│       │   ├── init_db.py                    # 数据库初始化钩子
+│       │   ├── models.py                     # ORM 模型（HealthOverviewDaily 等）
+│       │   └── migrations/                   # 迁移脚本目录
+│       ├── jobs/              # 定时任务（APScheduler）
+│       │   └── __pycache__/                  # 编译缓存
+│       ├── models/            # 业务领域模型
+│       │   ├── __init__.py                   # 包初始化
+│       │   ├── repo_catalog.py               # 仓库目录实体
+│       │   ├── repo_docs.py                  # 仓库文档实体
+│       │   └── repo_issues.py                # 仓库 Issue 实体
+│       ├── schemas/           # Pydantic 模式
+│       │   ├── __init__.py                   # 包初始化
+│       │   ├── agent.py                      # Agent 请求/响应模型
+│       │   ├── output_schema.py              # 标准输出结构定义
+│       │   └── requests.py                   # 通用请求参数模型
+│       ├── services/          # 服务编排与计算
+│       │   ├── __init__.py                   # 包初始化
+│       │   ├── agent_runtime.py              # Agent 运行时封装
+│       │   ├── ai_service/                   # AI 生成/验证/模板
+│       │   │   ├── cache.py                  # AI 结果缓存
+│       │   │   ├── facts/                    # 事实卡片计算
+│       │   │   │   ├── health_facts.py       # 健康度事实汇总
+│       │   │   │   ├── newcomer_facts.py     # 新人推荐事实汇总
+│       │   │   │   └── trend_facts.py        # 趋势分析事实汇总
+│       │   │   ├── render/                   # 渲染器
+│       │   │   │   └── markdown.py           # Markdown 渲染
+│       │   │   ├── templates/                # 提示词模板
+│       │   │   │   ├── system_prompt.txt     # 系统提示词
+│       │   │   │   ├── health_prompt.txt     # 健康度分析提示词
+│       │   │   │   ├── health_system_prompt.txt # 健康度系统提示词
+│       │   │   │   ├── newcomer_prompt.txt   # 新人推荐提示词
+│       │   │   │   └── trend_prompt.txt      # 趋势分析提示词
+│       │   │   └── validators/               # 输出校验
+│       │   │       ├── schema.py             # 输出 Schema 校验
+│       │   │       └── evidence_check.py     # 证据卡一致性校验
+│       │   ├── bootstrap_service.py          # 初始化/引导服务
+│       │   ├── compare.py                    # 对比分析服务
+│       │   ├── composite_metrics.py          # 复合指标计算
+│       │   ├── evidence.py                   # 证据卡生成
+│       │   ├── github_fetch.py               # GitHub 数据抓取
+│       │   ├── governance.py                 # 治理评分计算
+│       │   ├── health_pipeline.py            # 健康度管线编排
+│       │   ├── health_refresh.py             # 健康度刷新作业
+│       │   ├── iotdb_service.py              # IoTDB 服务封装
+│       │   ├── metric_engine.py              # 算分引擎
+│       │   ├── metrics.py                    # 指标组合/聚合
+│       │   ├── monitor.py                    # 监控服务
+│       │   ├── newcomer_plan.py              # 新人行动计划生成
+│       │   ├── newcomer_scoring.py           # 新人准备度与匹配度
+│       │   ├── orchestrator.py               # 任务编排器
+│       │   ├── portfolio.py                  # 组合建议生成
+│       │   ├── recommend.py                  # 推荐策略
+│       │   ├── report.py                     # 报告生成
+│       │   ├── router.py                     # 动态路由编排
+│       │   └── snapshot.py                   # 快照落库
+│       ├── skills/            # Agent 技能插件
+│       │   ├── __init__.py                   # 包初始化
+│       │   ├── advisor.py                    # 治理顾问技能
+│       │   └── base.py                       # 技能基类
+│       └── tools/             # 外部服务客户端
+│           ├── __init__.py                   # 包初始化
+│           ├── dataease_admin_client.py      # DataEase 管理端 API 客户端
+│           ├── dataease_client.py            # DataEase 普通 API 客户端
+│           ├── github_client.py              # GitHub API 客户端
+│           └── opendigger_client.py          # OpenDigger 指标 API 客户端
+├── ui-react/                  # 前端（React + Vite）
+│   ├── index.html                        # 应用入口 HTML
+│   ├── package.json                      # 前端依赖清单
+│   ├── vite.config.js                    # Vite 构建配置
+│   ├── README.md                         # 前端项目说明
+│   └── src/
+│       ├── App.jsx / App.css             # 根组件与样式
+│       ├── main.jsx / index.css          # 入口脚本与全局样式
+│       ├── pages/
+│       │   └── TrendMonitor.jsx          # 趋势监控页面
+│       └── service/
+│           └── api.js                    # 前端 API 封装
+└── frontend/                  # 另一个轻量前端（可选）
+  ├── index.html                        # 静态页面
+  ├── package.json                      # 依赖清单
+  └── package-lock.json                 # 依赖锁定
 ```
 
 ---

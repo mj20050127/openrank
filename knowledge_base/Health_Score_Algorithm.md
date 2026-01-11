@@ -26,19 +26,22 @@ $$\text{Vitality} = 0.30 \times I + 0.40 \times M + 0.20 \times C + 0.10 \times 
 
 其中：
 
-- **Influence（影响力）$I$**：基于 OpenRank 对数评分
-  $$I = \text{clamp}(18 \times \ln(1 + \text{OpenRank}), 0, 100)$$
+- **Influence（影响力）$I$**：基于 OpenRank 对数评分，
+- 
+- $I=\text{clamp}(18 \times \ln(1 + \text{OpenRank}), 0, 100)$
 
-- **Momentum（动能）$M$**：最近 3 个月活动量
-  $$M = \text{clamp}(18 \times \ln(1 + \text{Activity}_{3m}), 0, 100)$$
+- **Momentum（动能）$M$**：最近 3 个月活动量，
+-
+- $M=\text{clamp}(18 \times \ln(1 + \text{Activity}_{3m}), 0, 100)$
 
-- **Community（社区）$C$**：参与者和新贡献者
-  $$C = 0.7 \times \text{clamp}(18 \times \ln(1 + P), 0, 100) + 0.3 \times \text{clamp}(18 \times \ln(1 + NC), 0, 100)$$
+- **Community（社区）$C$**：参与者和新贡献者，
+-
+- $C = 0.7 \times \text{clamp}(18 \times \ln(1 + P), 0, 100) + 0.3 \times \text{clamp}(18 \times \ln(1 + NC), 0, 100)$
+- ，其中 $P$ 为过去 3 个月参与者数，$NC$ 为新贡献者数
 
-  其中 $P$ 为过去 3 个月参与者数，$NC$ 为新贡献者数
+- **Growth（增长率）$G$**：活动增长势头，
 
-- **Growth（增长率）$G$**：活动增长势头
-  $$G = \text{clamp}\left(100 \times \frac{\text{Activity}_{3m} - \text{Activity}_{prev3m}}{3 \times \text{Activity}_{prev3m}} + 100\right), 0, 100)$$
+$$G = \text{clamp}\left(100 \times \frac{\text{Activity}_{3m} - \text{Activity}_{prev3m}}{3 \times \text{Activity}_{prev3m}} + 100, 0, 100\right)$$
 
 ---
 
@@ -69,11 +72,11 @@ $$
 
 三个子维度：
 
-$$\text{FirstResponse} = \text{weighted\_avg}(T(\text{issue\_first}), T(\text{pr\_first}), w)$$
+$$\text{FirstResponse} = \text{weighted-avg}(T(\text{issue-first}), T(\text{pr-first}), w)$$
 
-$$\text{Closing} = \text{weighted\_avg}(T(\text{issue\_close}), T(\text{pr\_close}), w)$$
+$$\text{Closing} = \text{weighted-avg}(T(\text{issue-close}), T(\text{pr-close}), w)$$
 
-$$\text{Backlog} = \text{weighted\_avg}(T(\text{issue\_age}), T(\text{pr\_age}), w)$$
+$$\text{Backlog} = \text{weighted-avg}(T(\text{issue-age}), T(\text{pr-age}), w)$$
 
 其中权重 $w$ 按 Issue/PR 数量的对数加权：$w_i = \ln(1 + n_i)$
 
@@ -91,17 +94,16 @@ $$\text{Resilience} = 0.45 \times BF + 0.35 \times D + 0.20 \times RT$$
 
 其中：
 
-- **Bus Factor（总线因子）$BF$**
-  $$BF = \text{clamp}(20 \times \text{BusFactor}, 0, 100)$$
+- **Bus Factor（总线因子）$BF$**：
+- $BF=\text{clamp}(20 \times \text{BusFactor}, 0, 100)$
 
-- **Diversity（代码多样性）$D$**
-  $$D = \text{clamp}(100 \times (1 - \text{HHI}), 0, 100)$$
+- **Diversity（代码多样性）$D$**：
+- $D=\text{clamp}(100 \times (1 - \text{HHI}), 0, 100)$；
+- 或使用 Top-1 Share：
+- $D=\text{clamp}(100 \times (1 - \text{Top1Share}), 0, 100)$
 
-  或使用 Top-1 Share：
-  $$D = \text{clamp}(100 \times (1 - \text{Top1Share}), 0, 100)$$
-
-- **Retention（贡献者留存率）$RT$**
-  $$RT = \text{clamp}\left(100 \times \left(1 - \frac{\text{InactiveContributors}}{\max(1, \text{TotalContributors})}\right), 0, 100\right)$$
+- **Retention（贡献者留存率）$RT$**：
+- $RT=\text{clamp}\left(100 \times \left(1 - \frac{\text{InactiveContributors}}{\max(1, \text{TotalContributors})}\right), 0, 100\right)$
 
 ---
 
@@ -113,25 +115,24 @@ $$\text{Governance} = 0.45 \times F + 0.35 \times P + 0.20 \times T$$
 
 其中：
 
-- **Files（文件完整度）$F$**：GitHub Community Profile 返回的健康百分比
-  $$F = \text{clamp}(\text{GitHub\_Health\_Percentage}, 0, 100)$$
+- **Files（文件完整度）$F$**：GitHub Community Profile 返回的健康百分比，
+- $F=\text{clamp}(\text{GitHub-Health-Percentage}, 0, 100)$
 
-- **Process（流程透明度）$P$**：基于响应度的流程评分
-  $$P = 0.6 \times \text{IssueFirstResponse} + 0.4 \times \text{IssueClosing}$$
+- **Process（流程透明度）$P$**：基于响应度的流程评分，
+- $P = 0.6 \times \text{IssueFirstResponse} + 0.4 \times \text{IssueClosing}$
 
-- **Transparency（透明度奖励）$T$**
+- **Transparency（透明度奖励）$T$**:
+- 
+$$
+T = \begin{cases} 
+100 & \text{if 有 README, License, Contributing 且有 Issue/PR 模板} \\ 
+\text{Coverage}(\text{files}) & \text{otherwise} 
+\end{cases}
+$$
+- 其中
+- $\text{Coverage} = 100 \times \frac{\text{count of required files present}}{7}$
 
-  $$
-  T = \begin{cases}
-  100 & \text{if 有 README, License, Contributing 且有 Issue/PR 模板} \\
-  \text{Coverage}(\text{files}) & \text{otherwise}
-  \end{cases}
-  $$
-
-  其中：
-  $$\text{Coverage} = 100 \times \frac{\text{count of required files present}}{7}$$
-
-  必检查文件：README, License, Contributing, Code of Conduct, Security, Issue Template, PR Template
+   必检查文件：README, License, Contributing, Code of Conduct, Security, Issue Template, PR Template
 
 **降级处理**：若治理分无法计算，使用：
 $$\text{Governance} = 0.8 \times \text{Vitality} + 20$$
@@ -146,11 +147,11 @@ $$\text{Security} = 0.70 \times B + 0.20 \times C + 0.10 \times \text{Bonus}$$
 
 其中：
 
-- **Base（基础分）$B$**
-  $$B = \text{clamp}(10 \times \text{Scorecard\_Score}, 0, 100)$$
+- **Base（基础分）$B$**：
+- $B=\text{clamp}(10 \times \text{Scorecard-Score}, 0, 100)$
 
-- **Critical（关键检查）$C$**：关键检查项的平均分
-  $$C = \text{clamp}\left(\frac{1}{n} \sum_{i=1}^{n} \text{check}_i \times 10, 0, 100\right)$$
+- **Critical（关键检查）$C$**：关键检查项的平均分，
+- $C=\text{clamp}\left(\frac{1}{n} \sum_{i=1}^{n} \text{check}_i \times 10, 0, 100\right)$
 
 - **Bonus（奖励）**：固定 10 分
 
@@ -170,7 +171,8 @@ $$\text{HealthScore} = 0.30 \times V + 0.25 \times R + 0.20 \times Re + 0.15 \ti
 - $G$ = Governance（治理）
 - $S$ = Security（安全）
 
-**最终结果**：$\text{HealthScore} \in [0, 100]$
+**最终结果**：
+$\text{HealthScore} \in [0, 100]$
 
 ---
 
