@@ -1,0 +1,60 @@
+Health Report Prompt v2（User Prompt）
+输入：FACTS（JSON）如下（由后端生成并注入）：
+FACTS = {{health_facts_json}}
+
+请生成 module="health" 的报告 JSON（严格合法 JSON），并满足以下结构与内容要求：
+
+A. 页面结构对齐（对应你前端的模块）
+
+summary_bullets：3 条以内，每条必须能落到 evidence（有 key/value/dt）。
+
+sections 必须按顺序包含以下 5 个标题（title 必须一致）：
+"Executive Summary"
+"Key Evidence"
+"五维解读"
+"行动建议"
+"数据完整性与置信度"
+
+B. 写作要求（更像“体检报告”，少口号，多证据）
+
+Executive Summary：用 2～4 句话总结：总体健康分 + 最大优势维度 + 最大短板维度 + 当前最需要关注的 1 个风险信号（必须有 evidence）。
+
+Key Evidence：以列表形式输出“本次体检用到的关键事实”，至少 8 条（例如 score_health、五维分、openrank、activity、issue/pr response、bus factor、scorecard 等），若缺失就写入 data_gaps，并在 warnings 说明“缺少该证据，结论降级为定性”。
+
+五维解读：必须按以下顺序逐维输出：活跃度/响应性/抗风险/治理/安全。每维固定格式：
+- 状态一句话（不要超过 25 字）
+- 关键指标（最多 3 条，来自 FACTS）
+- 影响（对项目/新人/维护者的影响）
+- 建议（1～2 条，必须可执行）
+- 监控（列出 metrics_to_watch）
+
+行动建议：输出 P0/P1/P2 三档（即 actions 数组中至少 3 条），并按“7天内可做/30天内可做”拆 steps，且每条 action 的 metrics_to_watch 必须来自 FACTS 已存在的字段名。
+
+数据完整性与置信度：
+- 明确 time_window_days、used_dt（如果 FACTS 没有，置 null 并解释）
+- 说明：是否有时间序列；如果没有，禁止趋势判断，并写入 warnings
+- 列出 data_gaps（例如缺少 issue/pr 的序列、缺少 retention/hhi/top1share 等）
+
+C. 指标引用优先级（与你表字段对齐）
+
+综合/五维：score_health, score_vitality, score_responsiveness, score_resilience, score_governance, score_security
+
+活跃度证据优先：metric_openrank, metric_activity, metric_new_contributors, metric_activity_growth, metric_stars_growth_rate（若存在）
+
+响应性证据优先：metric_issue_response_time_h, metric_issue_resolution_duration_h, metric_issue_age_h, metric_pr_response_time_h, metric_pr_resolution_duration_h, metric_pr_age_h
+
+风险证据优先：metric_bus_factor, metric_inactive_contributors, metric_retention_rate（若缺失就写 data_gaps）
+
+治理证据优先：metric_governance_files, metric_github_health_percentage
+
+安全证据优先：metric_scorecard_score, metric_scorecard_checks, metric_security_defaulted
+
+D. 禁止事项
+
+如果 FACTS 里没有趋势字段（series/delta/growth），禁止出现“持续上升/下降/近期趋势”字样。
+
+禁止出现没有 evidence 支撑的数字、阈值、分位数、对标结论。
+
+禁止输出仓库专属命令（除非 FACTS 给了 docs_extract）。
+
+输出必须是严格合法 JSON。

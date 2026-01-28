@@ -1,0 +1,9 @@
+{
+  "name": "Demo-Portfolio",
+  "repos": [
+    "X-lab2017/open-digger",
+    "facebook/react",
+    "vuejs/core"
+  ],
+  "notes": "演示组合：健康+对比"
+}

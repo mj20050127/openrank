@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.env
+.DS_Store
+.idea/
+.vscode/
+node_modules/
+dist/
+backend/app.db
+data/cache/
+# 忽略数据库数据 (千万不能传!)
+data/pg_data/
+backend/data/pg_data/
+*.db
+*.sqlite3
+demo1.mp4

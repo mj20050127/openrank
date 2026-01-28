@@ -1,0 +1,9 @@
+{
+  "name": "openso-oss-copilot-frontend",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "dev": "echo \"TODO: choose Vue/React and set dev server\"",
+    "build": "echo \"TODO\""
+  }
+}

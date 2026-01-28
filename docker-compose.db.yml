@@ -1,0 +1,20 @@
+version: "3.9"
+services:
+  # 只跑数据库，稳定高效
+  postgres:
+    image: postgres:16
+    container_name: openrank-postgres
+    restart: always
+    environment:
+      POSTGRES_USER: openrank
+      POSTGRES_PASSWORD: openrank
+      POSTGRES_DB: openrank
+    ports:
+      - "5432:5432"  # 关键：把容器端口映射出来，供本地后端连接
+    volumes:
+      - ./data/pg_data:/var/lib/postgresql/data # 数据存到本地，防丢失
+    networks:
+      - openrank-net
+
+networks:
+  openrank-net:

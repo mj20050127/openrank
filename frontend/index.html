@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>OpenRank 快速看板（E2E MVP）</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto; margin: 24px; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: end; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 14px 16px; }
+    input { padding: 10px 12px; border: 1px solid #ccc; border-radius: 10px; min-width: 320px; }
+    button { padding: 10px 14px; border: 0; border-radius: 10px; cursor: pointer; }
+    button.primary { background: #111; color: #fff; }
+    .muted { color: #666; font-size: 13px; }
+    .kpis { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 16px; }
+    .kpi { min-width: 220px; }
+    .kpi .label { color: #666; font-size: 13px; }
+    .kpi .value { font-size: 28px; font-weight: 700; margin-top: 6px; }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+    .chart { height: 360px; }
+    .status { margin-top: 10px; }
+    code { background: #f6f6f6; padding: 2px 6px; border-radius: 6px; }
+    @media (max-width: 900px) { .charts { grid-template-columns: 1fr; } input { min-width: 240px; } }
+  </style>
+</head>
+<body>
+  <h2>OpenDigger → ETL → DB → API → 前端展示（MVP）</h2>
+
+  <div class="row card">
+    <div>
+      <div class="muted">仓库（owner/repo）</div>
+      <input id="repo" value="ossf/scorecard" />
+      <div class="muted" style="margin-top:8px;">
+        点击 <b>抓取并展示</b>：后端会先抓取并入库，然后再从数据库读取并画图。
+      </div>
+    </div>
+
+    <div>
+      <button class="primary" id="runBtn">抓取并展示</button>
+      <button id="onlyQueryBtn">只查询（不抓取）</button>
+      <div class="status muted" id="status">状态：就绪</div>
+    </div>
+  </div>
+
+  <div class="kpis">
+    <div class="card kpi">
+      <div class="label">OpenRank 最新值</div>
+      <div class="value" id="openrankValue">-</div>
+      <div class="muted" id="openrankDt">dt: -</div>
+    </div>
+    <div class="card kpi">
+      <div class="label">Activity 最新值</div>
+      <div class="value" id="activityValue">-</div>
+      <div class="muted" id="activityDt">dt: -</div>
+    </div>
+  </div>
+
+  <div class="charts">
+    <div class="card">
+      <div class="muted">OpenRank 趋势</div>
+      <div id="chartOpenrank" class="chart"></div>
+    </div>
+    <div class="card">
+      <div class="muted">Activity 趋势</div>
+      <div id="chartActivity" class="chart"></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px;">
+    <div class="muted">接口说明（同源）</div>
+    <div style="margin-top:8px;">
+      1) <code>POST /api/etl/fetch?repo=...&metrics=openrank,activity</code><br/>
+      2) <code>GET /api/metrics/trend?repo=...&metric=openrank</code> / <code>activity</code>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const status = (msg) => { $("status").textContent = "状态：" + msg; };
+
+    async function apiFetchAndStore(repo, metrics) {
+      // 触发后端 ETL：抓取并写入数据库
+      const url = `/api/etl/fetch?repo=${encodeURIComponent(repo)}&metrics=${encodeURIComponent(metrics.join(","))}`;
+      const res = await fetch(url, { method: "POST" });
+      if (!res.ok) throw new Error(`ETL 失败：HTTP ${res.status}`);
+      return await res.json();
+    }
+
+    async function apiTrend(repo, metric) {
+      const url = `/api/metrics/trend?repo=${encodeURIComponent(repo)}&metric=${encodeURIComponent(metric)}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`查询失败：HTTP ${res.status}`);
+      return await res.json(); // 期望：{ repo, metric, points:[{dt,value},...] }
+    }
+
+    function renderKpi(metric, points) {
+      if (!points || points.length === 0) {
+        $(metric + "Value").textContent = "-";
+        $(metric + "Dt").textContent = "dt: -";
+        return;
+      }
+      const last = points[points.length - 1];
+      $(metric + "Value").textContent = last.value;
+      $(metric + "Dt").textContent = "dt: " + last.dt;
+    }
+
+    function renderLine(domId, title, points) {
+      const dom = document.getElementById(domId);
+      const chart = echarts.init(dom);
+
+      const x = (points || []).map(p => p.dt);
+      const y = (points || []).map(p => p.value);
+
+      chart.setOption({
+        tooltip: { trigger: "axis" },
+        xAxis: { type: "category", data: x },
+        yAxis: { type: "value" },
+        series: [{ type: "line", data: y, smooth: true }]
+      });
+
+      window.addEventListener("resize", () => chart.resize());
+    }
+
+    async function queryAndRender(repo) {
+      status("查询中...");
+      const [openrank, activity] = await Promise.all([
+        apiTrend(repo, "openrank"),
+        apiTrend(repo, "activity")
+      ]);
+
+      const openrankPoints = openrank.points || [];
+      const activityPoints = activity.points || [];
+
+      renderKpi("openrank", openrankPoints);
+      renderKpi("activity", activityPoints);
+
+      renderLine("chartOpenrank", "openrank", openrankPoints);
+      renderLine("chartActivity", "activity", activityPoints);
+
+      status("完成 ✅");
+    }
+
+    $("runBtn").addEventListener("click", async () => {
+      try {
+        const repo = $("repo").value.trim();
+        if (!repo.includes("/")) throw new Error("repo 格式应为 owner/repo");
+        status("触发抓取（ETL）中...");
+        await apiFetchAndStore(repo, ["openrank", "activity"]);
+        await queryAndRender(repo);
+      } catch (e) {
+        console.error(e);
+        status("失败 ❌ " + e.message);
+      }
+    });
+
+    $("onlyQueryBtn").addEventListener("click", async () => {
+      try {
+        const repo = $("repo").value.trim();
+        await queryAndRender(repo);
+      } catch (e) {
+        console.error(e);
+        status("失败 ❌ " + e.message);
+      }
+    });
+  </script>
+</body>
+</html>

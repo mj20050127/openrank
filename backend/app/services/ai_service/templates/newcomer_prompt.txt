@@ -1,0 +1,38 @@
+输入：FACTS（JSON）如下（由后端生成并注入）：
+FACTS = {{newcomer_facts_json}}
+
+请生成 module="newcomer" 的报告 JSON，要求：
+
+目标用户是开源新人：需要“为什么推荐这个仓库 + 领哪个任务 + 怎么从 0 到 1 提 PR”的可执行路线。
+
+推荐逻辑必须可解释并对齐 CHAOSS 的“Newcomer Readiness/Onboarding 可用性”思路（用你现有 facts 字段表达即可）：
+
+Task Supply（新手任务供给）：good first issue/help wanted/docs/i18n 的数量与最近更新时间（若有）
+
+Responsiveness（响应性）：issue/PR 首响、关闭时长、backlog age（若有）
+
+Activity（活跃）：activity/openrank/new contributors/growth（若有）
+
+Onboarding（上手文档）：README/CONTRIBUTING/PR 模板是否存在，docs_extract 是否包含 setup/build/test/pr_steps
+
+sections 建议包含（按顺序）：
+
+推荐仓库 Top1（含 Fit、Readiness、难度、趋势摘要）
+
+推荐理由（每条理由都要有证据：key/value/dt）
+
+新手任务建议（从 facts.top_tasks 里挑 3 条最适合的，给出 title+url+为什么适合）
+
+可执行贡献路径（必须是 checklist 风格，可复制执行）
+
+优先使用 docs_extract（来自 repo_docs 抽取）
+
+如果 docs_extract 缺失：使用 “stack 通用模板”，并在 warnings 标注“通用模板，非仓库特定”
+
+风险提示/避坑（例如 CI 重、仓库过大、文档缺失、响应慢：只能基于 facts）
+
+actions 至少给 5 条：包含 “领任务→搭环境→跑测试→改动→提交 PR→沟通 review” 这条链路。
+
+任何命令/步骤必须来自 docs_extract 或通用模板；禁止凭空写具体仓库独有命令。
+
+输出必须是严格合法 JSON。

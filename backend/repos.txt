@@ -1,0 +1,10 @@
+github.com/microsoft/vscode
+github.com/facebook/react
+github.com/tensorflow/tensorflow
+github.com/pandas-dev/pandas
+github.com/scikit-learn/scikit-learn
+github.com/docker/docker
+github.com/kubernetes/kubernetes
+github.com/ansible/ansible
+github.com/apache/spark
+github.com/mysql/mysql-server

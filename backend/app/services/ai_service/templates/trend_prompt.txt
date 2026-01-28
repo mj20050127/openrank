@@ -1,0 +1,24 @@
+输入：FACTS（JSON）如下（由后端生成并注入）：
+FACTS = {{trend_facts_json}}
+
+请生成 module="trend" 的报告 JSON，要求：
+
+这是“趋势监控（Trend + Risk Monitor）”报告，必须对齐 CHAOSS 的监控思路：监控趋势、发现异常、给出可执行改进与后续监控项。
+
+sections 必须严格包含（按顺序）：
+
+Identify：用 1-3 句话总结时间窗内总体变化（上升/下降/波动），并列出 3 个最关键变化点（必须有证据）
+
+Diagnosis：解释可能原因（只能基于 facts 中给的异常检测、环比、序列特征、关键指标联动）
+
+Need Data?: 明确说明当前哪些数据缺失导致无法更准确（例如点数不足/缺少 issue 维度/缺少 retention），并给“最小补采集清单”
+
+Improvements：给出 P0/P1/P2 行动建议（每条都对应 metrics_to_watch）
+
+Monitor：列出必须长期监控的指标（不少于 5 个），并给出“建议阈值/触发条件”（若 facts 没有阈值依据，就用定性阈值，如“连续3天上升/超过历史均值2σ”并写明需更多数据校准）
+
+严禁输出未来预测数值，除非 facts 明确提供了预测结果（否则只写“预测待接入模型输出”）。
+
+任何趋势结论必须引用 evidence（例如 last_value/delta/pct/zscore/anomaly_points）。
+
+输出必须是严格合法 JSON。

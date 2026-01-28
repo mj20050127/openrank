@@ -1,0 +1,3 @@
+ossf/scorecard
+X-lab2017/open-digger
+kubernetes/kubernetes
