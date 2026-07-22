@@ -1,0 +1,981 @@
+.ecosystem-panel {
+  --ecosystem-canvas: #F3F8FC;
+  --ecosystem-canvas-center: #FFFFFF;
+  --ecosystem-surface: rgba(255, 255, 255, .86);
+  --ecosystem-surface-solid: #FFFFFF;
+  --ecosystem-border: rgba(107, 137, 168, .20);
+  --ecosystem-text: #17324D;
+  --ecosystem-text-secondary: #6C8196;
+  --ecosystem-text-muted: #91A4B7;
+  --ecosystem-repository: #3978F6;
+  --ecosystem-related-repository: #6675E8;
+  --ecosystem-core: #7768E8;
+  --ecosystem-contributor: #17A6A4;
+  --ecosystem-newcomer: #26B879;
+  --ecosystem-risk: #EF6969;
+  --ecosystem-edge: #9DB4C9;
+  --ecosystem-edge-active: #267DFF;
+  --ecosystem-edge-shared: #7367E8;
+  min-width: 0;
+  padding: 0 !important;
+  overflow: hidden;
+  color: var(--ecosystem-text);
+  border: 1px solid var(--ecosystem-border) !important;
+  border-radius: 16px !important;
+  background: var(--ecosystem-canvas) !important;
+  box-shadow: 0 18px 44px rgba(83, 118, 151, .12) !important;
+}
+
+.ecosystem-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 72px;
+  box-sizing: border-box;
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--ecosystem-border);
+  background: rgba(255, 255, 255, .74);
+}
+.ecosystem-title-block { min-width: 185px; }
+.ecosystem-heading h2 { margin: 0; color: var(--ecosystem-text); font-size: 18px; font-weight: 760; letter-spacing: .01em; }
+.ecosystem-heading p { margin: 5px 0 0; color: var(--ecosystem-text-secondary); font-size: 11px; }
+.ecosystem-legend { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 8px 14px; color: var(--ecosystem-text-secondary); font-size: 10px; }
+.ecosystem-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.ecosystem-legend i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--legend-color); box-shadow: 0 0 0 2px color-mix(in srgb, var(--legend-color) 14%, transparent); }
+
+.ecosystem-stage { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 650px; background: var(--ecosystem-canvas); }
+.ecosystem-stage.has-drawer { grid-template-columns: minmax(0, 1fr) minmax(300px, 328px); }
+.ecosystem-canvas {
+  position: relative;
+  min-width: 0;
+  min-height: 650px;
+  height: 650px;
+  overflow: hidden;
+  isolation: isolate;
+  background:
+    radial-gradient(rgba(90, 130, 165, .072) .75px, transparent .85px),
+    radial-gradient(circle at 48% 43%, #FFFFFF 0%, #F7FAFE 42%, #EDF4FA 76%, #E6EFF7 100%);
+  background-size: 28px 28px, auto;
+}
+.ecosystem-canvas::after { position: absolute; z-index: 3; inset: 0; pointer-events: none; content: ''; background: radial-gradient(circle at 48% 43%, transparent 48%, rgba(199, 216, 231, .11) 100%); }
+.ecosystem-coordinate-guide { display: none; position: absolute; z-index: 0; top: 50%; left: 48%; width: min(48vw, 470px); aspect-ratio: 1; border: 1px solid rgba(94, 130, 165, .055); border-radius: 50%; transform: translate(-50%, -50%) rotateX(68deg); box-shadow: 0 0 0 58px rgba(121, 153, 184, .018), 0 0 0 116px rgba(121, 153, 184, .012); pointer-events: none; }
+.ecosystem-graph-viewport { position: absolute; z-index: 1; inset: 76px 10px 86px; overflow: hidden; }
+.ecosystem-graph-viewport > div { width: 100%; height: 100%; }
+.ecosystem-graph-viewport canvas { display: block; }
+
+.ecosystem-controls {
+  position: absolute;
+  z-index: 6;
+  top: 16px;
+  left: 16px;
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  width: min(780px, calc(100% - 32px));
+  min-height: 52px;
+  box-sizing: border-box;
+  padding: 6px 10px;
+  border: 1px solid rgba(107, 137, 168, .15);
+  border-radius: 14px;
+  color: var(--ecosystem-text);
+  background: var(--ecosystem-surface);
+  box-shadow: 0 10px 26px rgba(79, 112, 146, .12);
+  backdrop-filter: blur(16px);
+}
+.ecosystem-controls label { display: grid; gap: 1px; color: var(--ecosystem-text-secondary); font-size: 9px; }
+.ecosystem-controls select { height: 27px; padding: 0 25px 0 9px; border: 1px solid rgba(107,137,168,.17); border-radius: 9px; color: var(--ecosystem-text); background: rgba(255,255,255,.88); font-size: 10px; }
+.ecosystem-controls input { accent-color: var(--ecosystem-repository); }
+.ecosystem-strength { min-width: 118px; }
+.ecosystem-strength input { width: 118px; margin: 0; }
+.ecosystem-check { display: inline-flex !important; grid-auto-flow: column; align-items: center; gap: 5px; height: 28px; padding: 0 8px; border-radius: 9px; background: rgba(232,240,248,.56); }
+.ecosystem-check input { margin: 0; }
+.ecosystem-mode { display: flex; align-items: center; height: 31px; padding: 3px; border-radius: 10px; background: rgba(218,229,240,.56); }
+.ecosystem-mode button, .ecosystem-command-group button, .ecosystem-detail-actions button, .ecosystem-detail-actions a {
+  min-height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-radius: 8px;
+  color: var(--ecosystem-text-secondary);
+  background: transparent;
+  font-size: 10px;
+  font-weight: 680;
+  cursor: pointer;
+}
+.ecosystem-mode button, .ecosystem-command-group button { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.ecosystem-mode button span, .ecosystem-command-group button span { font-size: 12px; }
+.ecosystem-mode button.active { color: #245EBD; background: rgba(255,255,255,.92); box-shadow: 0 3px 9px rgba(78,111,145,.11); }
+.ecosystem-command-group { display: flex; gap: 1px; margin-left: auto; }
+.ecosystem-command-group button:hover, .ecosystem-detail-actions button:hover, .ecosystem-detail-actions a:hover { color: var(--ecosystem-repository); background: rgba(57,120,246,.08); }
+
+.ecosystem-overlay { position: absolute; z-index: 9; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; padding: 24px; color: var(--ecosystem-text-secondary); text-align: center; background: rgba(243,248,252,.91); font-size: 11px; }
+.ecosystem-overlay span { width: 27px; height: 27px; border: 3px solid rgba(57,120,246,.16); border-top-color: var(--ecosystem-repository); border-radius: 50%; animation: gov-spin .8s ease-out infinite; }
+.ecosystem-overlay strong { color: var(--ecosystem-text); font-size: 14px; }
+.ecosystem-overlay p { max-width: 340px; margin: 0; line-height: 1.5; }
+.ecosystem-overlay.error strong { color: var(--ecosystem-risk); }
+
+.ecosystem-tooltip { position: absolute; z-index: 7; right: 18px; bottom: 92px; display: grid; grid-template-columns: 36px minmax(0,1fr); gap: 9px; width: min(290px, calc(100% - 36px)); box-sizing: border-box; padding: 11px; border: 1px solid rgba(92,124,156,.16); border-radius: 12px; color: var(--ecosystem-text); background: rgba(255,255,255,.92); box-shadow: 0 10px 25px rgba(76,109,143,.14); backdrop-filter: blur(14px); pointer-events: none; animation: ecosystem-tooltip-in 150ms ease-out; }
+.ecosystem-tooltip-icon, .ecosystem-tooltip-avatar { width: 36px; height: 36px; box-sizing: border-box; border-radius: 10px; }
+.ecosystem-tooltip-avatar { object-fit: cover; border: 1.5px solid var(--ecosystem-contributor); }
+.ecosystem-tooltip-icon { display: grid; place-items: center; color: #fff; background: linear-gradient(145deg, #5F91FA, #3978F6); font-weight: 800; }
+.ecosystem-tooltip-content { min-width: 0; }
+.ecosystem-tooltip strong, .ecosystem-tooltip span, .ecosystem-tooltip small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ecosystem-tooltip strong { color: var(--ecosystem-text); font-size: 12px; font-weight: 700; }
+.ecosystem-tooltip span, .ecosystem-tooltip small { margin-top: 3px; color: var(--ecosystem-text-secondary); font-size: 9px; }
+.ecosystem-tooltip em { display: block; margin-top: 5px; color: var(--ecosystem-risk); font-size: 9px; font-style: normal; }
+
+.ecosystem-timeline-dock { position: absolute; z-index: 6; right: 16px; bottom: 16px; left: 16px; }
+.ecosystem-timeline { display: grid; grid-template-columns: auto minmax(120px,1fr) auto auto; align-items: center; gap: 11px; min-height: 60px; box-sizing: border-box; padding: 9px 14px; border: 1px solid rgba(107,137,168,.15); border-radius: 14px; color: var(--ecosystem-text-secondary); background: rgba(255,255,255,.84); box-shadow: 0 10px 25px rgba(79,112,146,.11); backdrop-filter: blur(16px); font-size: 10px; }
+.ecosystem-timeline input[type='range'] { width: 100%; height: 4px; margin: 0; border-radius: 999px; accent-color: var(--ecosystem-repository); background: #D7E2EC; cursor: pointer; }
+.ecosystem-timeline input[type='range']::-webkit-slider-thumb { width: 16px; height: 16px; border: 2px solid var(--ecosystem-repository); border-radius: 50%; background: #fff; box-shadow: 0 2px 7px rgba(57,120,246,.22); transition: transform 150ms ease-out; appearance: none; }
+.ecosystem-timeline input[type='range']:hover::-webkit-slider-thumb { transform: scale(1.08); }
+.ecosystem-timeline strong { min-width: 58px; color: var(--ecosystem-repository); text-align: center; font-size: 11px; }
+
+.ecosystem-node-panel { min-width: 300px; height: 626px; box-sizing: border-box; margin: 12px 12px 12px 0; padding: 18px; overflow-y: auto; border: 1px solid var(--ecosystem-border); border-radius: 14px; color: var(--ecosystem-text); background: rgba(255,255,255,.88); box-shadow: -8px 10px 28px rgba(87,123,159,.11); backdrop-filter: blur(18px); animation: ecosystem-drawer-in 240ms ease-out; }
+.ecosystem-node-panel::-webkit-scrollbar { width: 7px; }
+.ecosystem-node-panel::-webkit-scrollbar-thumb { border-radius: 8px; background: rgba(107,137,168,.25); }
+.ecosystem-drawer-close { float: right; width: 27px; height: 27px; border: 0; border-radius: 8px; color: var(--ecosystem-text-secondary); background: rgba(126,154,184,.11); font-size: 17px; cursor: pointer; }
+.ecosystem-detail-title, .ecosystem-profile { padding-right: 32px; }
+.ecosystem-detail-title .node-kind, .ecosystem-profile .node-kind { color: var(--ecosystem-repository); font-size: 9px; font-weight: 780; letter-spacing: .04em; }
+.ecosystem-detail-title h3, .ecosystem-profile h3 { margin: 5px 0; color: var(--ecosystem-text); font-size: 16px; overflow-wrap: anywhere; }
+.ecosystem-detail-title p, .ecosystem-profile p { margin: 0; color: var(--ecosystem-text-secondary); font-size: 10px; line-height: 1.55; }
+.ecosystem-profile { display: grid; grid-template-columns: 50px minmax(0,1fr); align-items: center; gap: 11px; }
+.ecosystem-profile img, .profile-fallback { width: 50px; height: 50px; box-sizing: border-box; border: 2px solid var(--ecosystem-contributor); border-radius: 50%; }
+.ecosystem-profile img { object-fit: cover; background: #E7F0F8; }
+.profile-fallback { display: grid; place-items: center; color: var(--ecosystem-text); background: #E2EBF3; font-size: 12px; font-weight: 800; }
+.ecosystem-metric-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 8px; margin: 16px 0 8px; }
+.ecosystem-metric-grid.compact { grid-template-columns: repeat(4, minmax(0,1fr)); }
+.ecosystem-mini-metric { min-height: 56px; box-sizing: border-box; padding: 9px; border: 1px solid rgba(107,137,168,.13); border-radius: 10px; background: rgba(246,250,253,.82); }
+.ecosystem-mini-metric span { display: block; color: var(--ecosystem-text-secondary); font-size: 9px; }
+.ecosystem-mini-metric strong { display: block; margin-top: 5px; overflow: hidden; color: var(--ecosystem-text); font-size: 13px; font-weight: 750; text-overflow: ellipsis; white-space: nowrap; }
+.ecosystem-status-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.ecosystem-status-row span { padding: 4px 8px; border-radius: 999px; color: #5549A3; background: rgba(119,104,232,.10); font-size: 9px; }
+.ecosystem-status-row .risk { color: #B94E4E; background: rgba(239,105,105,.11); }
+.ecosystem-drawer-section { margin-top: 18px; }
+.ecosystem-drawer-section h4 { margin: 0 0 8px; color: var(--ecosystem-text); font-size: 11px; }
+.ecosystem-drawer-section p, .ecosystem-repo-row { color: var(--ecosystem-text-secondary); font-size: 10px; line-height: 1.55; }
+.ecosystem-repo-row { display: flex; justify-content: space-between; gap: 8px; padding: 7px 0; }
+.ecosystem-repo-row + .ecosystem-repo-row { border-top: 1px solid rgba(107,137,168,.10); }
+.ecosystem-repo-row b { color: var(--ecosystem-text); }
+.ecosystem-detail-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 16px; }
+.ecosystem-detail-actions button, .ecosystem-detail-actions a { display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid var(--ecosystem-border); background: rgba(255,255,255,.76); text-decoration: none; }
+.ecosystem-detail-actions .primary { color: #fff; border-color: var(--ecosystem-repository); background: var(--ecosystem-repository); }
+
+.ecosystem-notice { padding: 8px 14px; border-top: 1px solid rgba(239,105,105,.16); color: #925656; background: rgba(255,248,246,.88); font-size: 10px; }
+.ecosystem-meta { display: flex; flex-wrap: wrap; gap: 6px 17px; padding: 9px 14px 11px; border-top: 1px solid var(--ecosystem-border); color: var(--ecosystem-text-muted); background: rgba(247,250,253,.90); font-size: 8px; }
+
+.ecosystem-panel:fullscreen { width: 100vw; height: 100vh; border: 0; border-radius: 0; background: var(--ecosystem-canvas) !important; }
+.ecosystem-panel:fullscreen .ecosystem-stage { height: calc(100vh - 108px); }
+.ecosystem-panel:fullscreen .ecosystem-canvas { height: calc(100vh - 108px); min-height: 560px; }
+.ecosystem-panel:fullscreen .ecosystem-node-panel { height: calc(100vh - 132px); min-height: 536px; }
+
+@keyframes ecosystem-drawer-in { from { opacity: 0; transform: translateX(18px); } to { opacity: 1; transform: translateX(0); } }
+@keyframes ecosystem-tooltip-in { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-width: 1180px) { .ecosystem-stage.has-drawer { grid-template-columns: minmax(0,1fr) 300px; } .ecosystem-controls { width: calc(100% - 32px); } .ecosystem-command-group button { padding: 0 6px; } }
+@media (max-width: 900px) { .ecosystem-controls { overflow-x: auto; } .ecosystem-strength { min-width: 100px; } .ecosystem-strength input { width: 100px; } }
+@media (max-width: 820px) { .ecosystem-heading { align-items: flex-start; min-height: 94px; flex-direction: column; gap: 8px; } .ecosystem-legend { justify-content: flex-start; } .ecosystem-stage.has-drawer { grid-template-columns: 1fr; } .ecosystem-canvas { min-height: 600px; height: 600px; } .ecosystem-node-panel { width: auto; min-width: 0; height: auto; max-height: 420px; margin: 0 12px 12px; } .ecosystem-timeline { grid-template-columns: minmax(80px,1fr) auto; } .ecosystem-timeline > span { display: none; } .ecosystem-controls { top: 12px; right: 12px; left: 12px; width: calc(100% - 24px); } .ecosystem-graph-viewport { inset: 76px 4px 84px; } }
+@media (prefers-reduced-motion: reduce) { .ecosystem-overlay span { animation-duration: .01ms !important; } .ecosystem-node-panel, .ecosystem-tooltip { animation: none; } .ecosystem-timeline input[type='range']::-webkit-slider-thumb { transition: none; } }
+.ecosystem-heading { min-height: 86px; padding: 18px 24px 13px; align-items: flex-start; }
+.ecosystem-heading h2 { font-size: 22px; font-weight: 800; }
+.ecosystem-heading p { font-size: 12px; }
+.ecosystem-legend { align-self: flex-end; }
+.ecosystem-stage, .ecosystem-canvas { min-height: 700px; height: 70vh; }
+.ecosystem-stage.has-drawer { grid-template-columns: minmax(0, 1fr) 360px; }
+.ecosystem-graph-viewport { inset: 82px 8px 104px; }
+.ecosystem-controls-v2 { right: 16px; left: auto; width: auto; max-width: calc(100% - 32px); border-radius: 12px; }
+.ecosystem-controls-v2 .ecosystem-mode button { min-width: 50px; }
+.ecosystem-controls-v2 .ecosystem-mode button.active { color: #fff; background: #267DFF; box-shadow: 0 4px 10px rgba(38,125,255,.25); }
+.ecosystem-controls-v2 .ecosystem-strength { display: grid; grid-template-columns: auto 100px auto; align-items: center; gap: 7px; min-width: 230px; }
+.ecosystem-controls-v2 .ecosystem-strength b { color: var(--ecosystem-text-secondary); font-size: 10px; white-space: nowrap; }
+.ecosystem-controls-v2 .ecosystem-command-group button { width: 34px; height: 34px; justify-content: center; border: 1px solid rgba(107,137,168,.16); background: rgba(255,255,255,.9); font-size: 16px; }
+.ecosystem-search { position: relative; }
+.ecosystem-search-popover { position: absolute; z-index: 20; top: 42px; right: 0; width: 250px; padding: 9px; border: 1px solid var(--ecosystem-border); border-radius: 12px; background: rgba(255,255,255,.97); box-shadow: 0 16px 35px rgba(45,78,110,.2); }
+.ecosystem-search-popover > input { width: 100%; height: 34px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--ecosystem-border); border-radius: 8px; }
+.ecosystem-search-results { display: grid; gap: 2px; margin-top: 6px; }
+.ecosystem-search-results button { width: 100% !important; height: 32px !important; justify-content: flex-start !important; border: 0 !important; font-size: 10px !important; }
+.ecosystem-search-results p { margin: 8px; color: var(--ecosystem-text-secondary); font-size: 10px; }
+.ecosystem-node-panel-v2 { height: calc(70vh - 24px); min-height: 676px; min-width: 344px; margin: 12px; padding: 18px 16px 86px; background: rgba(255,255,255,.94); }
+.ecosystem-node-panel-v2 .ecosystem-profile { grid-template-columns: 76px minmax(0,1fr); min-height: 82px; }
+.ecosystem-profile-avatar { position: relative; }
+.ecosystem-profile-avatar img, .ecosystem-profile-avatar .profile-fallback { width: 72px; height: 72px; border: 4px solid #fff; box-shadow: 0 0 0 3px #FFD18D; }
+.ecosystem-profile-avatar > i { position: absolute; right: 0; bottom: 0; display: grid; place-items: center; width: 23px; height: 23px; border: 3px solid #fff; border-radius: 50%; color: #fff; background: #267DFF; font-size: 11px; }
+.ecosystem-profile .node-kind { display: inline-flex; margin: 1px 0 3px; padding: 4px 8px; border-radius: 999px; color: #267DFF; background: #EAF3FF; }
+.contributor-kpis { grid-template-columns: repeat(3, minmax(0,1fr)); }
+.contributor-kpis .ecosystem-mini-metric { min-height: 74px; text-align: center; }
+.contributor-kpis .ecosystem-mini-metric strong { font-size: 17px; }
+.ecosystem-heatmap { display: grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap: 5px; }
+.ecosystem-heatmap i { height: 31px; border-radius: 3px; background: #E8F1FB; }
+.ecosystem-heatmap .level-1 { background:#CFE1FA; } .ecosystem-heatmap .level-2 { background:#9FC4F7; } .ecosystem-heatmap .level-3 { background:#639BF2; } .ecosystem-heatmap .level-4 { background:#267DFF; }
+.ecosystem-heatmap .level-missing { background: repeating-linear-gradient(135deg,#F0F4F8 0 3px,#E2EAF1 3px 5px); }
+.ecosystem-heatmap-months, .ecosystem-heatmap-legend { display:flex; align-items:center; justify-content:space-between; margin-top:5px; color:var(--ecosystem-text-muted); font-size:8px; }
+.ecosystem-heatmap-legend { justify-content:flex-end; gap:4px; }
+.ecosystem-heatmap-legend i { width:14px; height:8px; background:#CFE1FA; } .ecosystem-heatmap-legend i:nth-of-type(2){background:#9FC4F7}.ecosystem-heatmap-legend i:nth-of-type(3){background:#639BF2}.ecosystem-heatmap-legend i:nth-of-type(4){background:#267DFF}
+.ecosystem-signal-list { display:grid; gap:8px; }
+.ecosystem-signal { display:grid; grid-template-columns:18px minmax(0,1fr) auto; gap:7px; align-items:center; padding:10px; border:1px solid #D8E9E3; border-radius:9px; color:#238261; background:#F5FBF8; }
+.ecosystem-signal.warning,.ecosystem-signal.risk { color:#C36C18; border-color:#F2DDC6; background:#FFF9F2; }
+.ecosystem-signal div b,.ecosystem-signal div span { display:block; font-size:9px; }.ecosystem-signal div span{margin-top:3px;color:var(--ecosystem-text-secondary)}.ecosystem-signal em{padding:3px 6px;border-radius:8px;background:rgba(255,255,255,.7);font-size:8px;font-style:normal}
+.sticky-actions { position:sticky; bottom:-70px; padding-top:12px; background:linear-gradient(transparent,#fff 16px); }
+.sticky-actions .primary { flex:1; justify-content:center; min-height:38px; }
+.ecosystem-timeline-v2 { grid-template-columns: 34px 24px auto minmax(180px,1fr) auto 24px; min-height:70px; }
+.ecosystem-timeline-v2 button { display:grid; place-items:center; width:30px; height:30px; border:0; border-radius:50%; color:#267DFF; background:#EDF5FF; cursor:pointer; }
+.ecosystem-timeline-v2 .timeline-play { color:#fff; background:#267DFF; }
+.timeline-track { position:relative; padding-top:18px; }
+.timeline-track > strong { position:absolute; top:-14px; transform:translateX(-50%); min-width:62px; padding:5px 7px; border-radius:5px; color:#fff; background:#267DFF; }
+.timeline-events { position:absolute; right:0; bottom:8px; left:0; pointer-events:none; }.timeline-events i{position:absolute;color:#8067E8;font-style:normal;transform:translateX(-50%)}
+.timeline-event-legend { grid-column:4/7; display:flex; justify-content:flex-end; gap:18px; font-size:8px; }
+@media (max-width: 1180px) { .ecosystem-stage.has-drawer { grid-template-columns:minmax(0,1fr) 330px; }.ecosystem-node-panel-v2{min-width:314px}.ecosystem-controls-v2 .ecosystem-strength{min-width:170px;grid-template-columns:auto 64px auto} }
+@media (max-width: 900px) { .ecosystem-controls-v2{right:12px;left:12px;width:calc(100% - 24px);overflow-x:auto}.ecosystem-stage.has-drawer{grid-template-columns:1fr}.ecosystem-node-panel-v2{width:auto;min-width:0;height:auto;min-height:0;max-height:520px;margin:0 12px 12px}.ecosystem-timeline-v2{grid-template-columns:34px 24px minmax(140px,1fr) 24px}.ecosystem-timeline-v2>span,.timeline-event-legend{display:none} }
+
+.ecosystem-panel { position: relative; background: #F7FAFE !important; }
+.ecosystem-heading {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(220px, 1fr) auto;
+  align-items: start;
+  min-height: 108px;
+  padding: 20px 22px 36px;
+  background: rgba(255,255,255,.9);
+}
+.ecosystem-heading .ecosystem-title-block { align-self: start; }
+.ecosystem-heading .ecosystem-legend {
+  position: absolute;
+  right: auto;
+  bottom: 12px;
+  left: 22px;
+  justify-content: flex-start;
+  gap: 10px 22px;
+  font-size: 9px;
+}
+.ecosystem-controls-v2 {
+  position: static;
+  align-self: start;
+  width: auto;
+  max-width: none;
+  min-height: 46px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.ecosystem-controls-v2 .ecosystem-mode,
+.ecosystem-controls-v2 .ecosystem-role-filter,
+.ecosystem-controls-v2 .ecosystem-strength,
+.ecosystem-controls-v2 .ecosystem-command-group {
+  min-height: 44px;
+  box-sizing: border-box;
+  padding: 5px;
+  border: 1px solid rgba(110,137,166,.16);
+  border-radius: 12px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 6px 18px rgba(59,91,124,.07);
+}
+.ecosystem-controls-v2 .ecosystem-role-filter { display: flex; align-items: center; }
+.ecosystem-controls-v2 .ecosystem-role-filter select { height: 32px; border: 0; }
+.ecosystem-controls-v2 .ecosystem-strength { min-width: 220px; padding: 6px 10px; }
+.ecosystem-controls-v2 .ecosystem-command-group { gap: 4px; }
+.ecosystem-controls-v2 .ecosystem-command-group button { width: 32px; height: 32px; border: 0; box-shadow: none; }
+.ecosystem-controls-v2 .ecosystem-check { display: none !important; }
+.ecosystem-stage { position: relative; min-height: 700px; height: min(760px, 74vh); }
+.ecosystem-canvas {
+  min-height: 700px;
+  height: min(760px, 74vh);
+  background:
+    radial-gradient(circle at 1px 1px, rgba(47,107,255,.065) 1px, transparent 1.2px) 0 0 / 24px 24px,
+    linear-gradient(135deg, #F9FCFF 0%, #F2F7FD 100%);
+}
+.ecosystem-canvas::after { background: radial-gradient(circle at 52% 45%, rgba(255,255,255,.18), rgba(206,222,239,.08)); }
+.ecosystem-graph-viewport { inset: 10px 8px 104px; }
+.ecosystem-stage.has-drawer { grid-template-columns: minmax(0,1fr) 360px; }
+.ecosystem-node-panel-v2 {
+  min-width: 0;
+  height: calc(min(760px, 74vh) - 24px);
+  min-height: 676px;
+  margin: 12px;
+  border-color: rgba(71,119,180,.2);
+  background: rgba(255,255,255,.97);
+  box-shadow: -10px 12px 32px rgba(49,82,119,.12);
+}
+.ecosystem-timeline-dock { right: 14px; bottom: 12px; left: 14px; }
+.ecosystem-timeline-v2 { min-height: 78px; border-radius: 15px; box-shadow: 0 8px 24px rgba(58,91,125,.08); }
+.ecosystem-tooltip { bottom: 102px; }
+@media (max-width: 1439px) {
+  .ecosystem-heading { grid-template-columns: minmax(190px,1fr) auto; padding-right: 14px; padding-left: 14px; }
+  .ecosystem-heading .ecosystem-legend { left: 14px; }
+  .ecosystem-controls-v2 { gap: 5px; }
+  .ecosystem-controls-v2 .ecosystem-strength { min-width: 178px; grid-template-columns: auto 68px auto; }
+  .ecosystem-controls-v2 .ecosystem-mode button { min-width: 42px; padding: 0 7px; }
+  .ecosystem-stage.has-drawer { display: block; }
+  .ecosystem-node-panel-v2 {
+    position: absolute;
+    z-index: 20;
+    top: 12px;
+    right: 12px;
+    bottom: 12px;
+    width: 320px;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+  }
+}
+@media (max-width: 1040px) {
+  .ecosystem-heading { grid-template-columns: 1fr; min-height: 150px; padding-bottom: 42px; }
+  .ecosystem-controls-v2 { margin-top: 10px; overflow-x: auto; }
+  .ecosystem-heading .ecosystem-legend { bottom: 10px; }
+}
+@media (max-width: 760px) {
+  .ecosystem-stage.has-drawer { display: grid; grid-template-columns: 1fr; height: auto; }
+  .ecosystem-node-panel-v2 { position: static; width: auto; max-height: 520px; margin: 0 12px 12px; }
+  .ecosystem-heading { min-height: 160px; }
+}
+
+.gov-ecosystem-slot .ecosystem-heading {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(160px, 1fr) auto;
+  align-items: start;
+  min-height: 92px;
+  height: 92px;
+  box-sizing: border-box;
+  padding: 10px 12px 30px;
+}
+.gov-ecosystem-slot .ecosystem-heading h2 { font-size: 18px; line-height: 24px; }
+.gov-ecosystem-slot .ecosystem-heading p { margin-top: 2px; font-size: 10px; }
+.gov-ecosystem-slot .ecosystem-heading .ecosystem-legend {
+  position: absolute;
+  right: auto;
+  bottom: 8px;
+  left: 14px;
+  justify-content: flex-start;
+  gap: 6px 18px;
+  font-size: 8px;
+}
+.gov-ecosystem-slot .ecosystem-legend i {
+  width: 20px;
+  height: 3px;
+  border-radius: 999px;
+  box-shadow: none;
+}
+.gov-ecosystem-slot .ecosystem-legend i.edge-high { height: 2px; }
+.gov-ecosystem-slot .ecosystem-legend i.edge-medium { height: 1.5px; }
+.gov-ecosystem-slot .ecosystem-legend i.edge-low { height: 1px; }
+.gov-ecosystem-slot .ecosystem-controls-v2 {
+  position: static;
+  top: auto;
+  right: auto;
+  left: auto;
+  align-self: start;
+  gap: 7px;
+  width: auto;
+  max-width: none;
+  min-height: 40px;
+  padding: 0;
+  overflow: visible;
+}
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-mode,
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-role-filter,
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-strength {
+  min-height: 40px;
+  padding: 4px;
+  border-radius: 10px;
+}
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-mode { height: 40px; }
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-mode button { min-width: 41px; min-height: 30px; padding: 0 7px; }
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-role-filter select { width: 104px; height: 30px; padding-right: 20px; }
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-strength {
+  grid-template-columns: auto 72px auto;
+  gap: 6px;
+  min-width: 176px;
+  padding-right: 8px;
+  padding-left: 8px;
+}
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-strength input { width: 72px; }
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-command-group {
+  gap: 6px;
+  min-height: 40px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+}
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-command-group button {
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(110,137,166,.18);
+  border-radius: 10px;
+  background: rgba(255,255,255,.96);
+  box-shadow: 0 5px 15px rgba(59,91,124,.06);
+}
+.gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-command-group svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.gov-ecosystem-slot .ecosystem-stage,
+.gov-ecosystem-slot .ecosystem-canvas { min-height: 500px; height: 500px; }
+.gov-ecosystem-slot .ecosystem-graph-viewport { inset: 8px 8px 58px; }
+.gov-ecosystem-slot .ecosystem-stage.has-drawer { display: block; }
+.gov-ecosystem-slot .ecosystem-node-panel-v2 {
+  position: absolute;
+  z-index: 20;
+  top: 10px;
+  right: 10px;
+  bottom: 10px;
+  width: 320px;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+}
+@media (max-width: 1040px) {
+  .gov-ecosystem-slot .ecosystem-heading {
+    grid-template-columns: minmax(145px, 1fr) auto;
+    min-height: 92px;
+    height: 92px;
+    padding-right: 8px;
+    padding-left: 10px;
+  }
+  .gov-ecosystem-slot .ecosystem-controls-v2 { gap: 4px; }
+  .gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-mode button { min-width: 36px; padding: 0 5px; }
+  .gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-role-filter select { width: 94px; }
+  .gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-strength { grid-template-columns: auto 54px auto; min-width: 154px; }
+  .gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-strength input { width: 54px; }
+  .gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-command-group { gap: 3px; }
+  .gov-ecosystem-slot .ecosystem-controls-v2 .ecosystem-command-group button { width: 34px; height: 38px; }
+}
+
+
+/* Observatory ecosystem atlas v3 */
+.health-observatory-main .ecosystem-panel {
+  --ecosystem-canvas: #f3f0e7;
+  --ecosystem-surface: #faf8f1;
+  --ecosystem-surface-solid: #faf8f1;
+  --ecosystem-border: #d8dbd9;
+  --ecosystem-text: #14231f;
+  --ecosystem-text-secondary: #43524c;
+  --ecosystem-text-muted: #718079;
+  --ecosystem-repository: #315b9a;
+  --ecosystem-contributor: #34755f;
+  --ecosystem-newcomer: #88ac94;
+  --ecosystem-risk: #c45f3a;
+  --ecosystem-edge: #8da096;
+  --ecosystem-edge-active: #14231f;
+  position: relative;
+  color: var(--ecosystem-text);
+  background: var(--ecosystem-canvas) !important;
+  font-family: "Noto Sans SC", "Source Han Sans CN", "Microsoft YaHei", system-ui, sans-serif;
+}
+.health-observatory-main .ecosystem-heading {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  padding: 9px 12px 25px;
+  border-bottom: 2px solid var(--ecosystem-border);
+  background: #faf8f1;
+}
+.health-observatory-main .ecosystem-title-block { min-width: 0; }
+.health-observatory-main .ecosystem-section-label { display: flex; align-items: baseline; gap: 7px; }
+.health-observatory-main .ecosystem-section-label span { color: #14231f; font: 700 13px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+.health-observatory-main .ecosystem-section-label strong { color: #14231f; font: 650 8px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; letter-spacing: .08em; }
+.health-observatory-main .ecosystem-section-label small { color: #718079; font-size: 8px; }
+.health-observatory-main .ecosystem-heading h2 { margin: 3px 0 0; color: #14231f; font-family: Georgia, "Times New Roman", "Noto Serif SC", serif; font-size: 20px; line-height: 1; font-weight: 700; }
+.health-observatory-main .ecosystem-heading p { margin: 4px 0 0; overflow: hidden; color: #718079; font: 500 8px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; text-overflow: ellipsis; white-space: nowrap; }
+.health-observatory-main .ecosystem-heading .ecosystem-legend { position: absolute; right: auto; bottom: 6px; left: 12px; justify-content: flex-start; gap: 4px 15px; color: #5f6d67; font-size: 7px; }
+.health-observatory-main .ecosystem-legend i { width: 18px; height: 3px; border-radius: 0; box-shadow: none; }
+.health-observatory-main .ecosystem-legend i.community { width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 1.5px solid var(--legend-color); }
+.health-observatory-main .ecosystem-legend i.edge-high { height: 2px; }
+.health-observatory-main .ecosystem-legend i.edge-medium { height: 1.5px; }
+.health-observatory-main .ecosystem-legend i.edge-low { height: 1px; }
+
+.health-observatory-main .ecosystem-controls-v2 {
+  position: static;
+  display: flex;
+  align-self: start;
+  gap: 5px;
+  width: auto;
+  max-width: 100%;
+  min-height: 34px;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-mode,
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-role-filter,
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength,
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group {
+  min-height: 32px;
+  height: 32px;
+  box-sizing: border-box;
+  padding: 0;
+  border: 1px solid rgba(27, 47, 41, .28);
+  border-radius: 2px;
+  background: #f3f0e7;
+  box-shadow: none;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-mode { display: flex; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-mode button { min-width: 38px; min-height: 30px; padding: 0 7px; border-right: 1px solid rgba(27, 47, 41, .2); border-radius: 0; color: #43524c; background: transparent; font-size: 9px; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-mode button:last-child { border-right: 0; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-mode button.active { color: #faf8f1; background: #a34d31; box-shadow: none; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-role-filter { display: flex; align-items: center; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-role-filter select { width: 98px; height: 30px; padding: 0 19px 0 7px; color: #43524c; border: 0; border-radius: 0; background: transparent; font-size: 9px; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength { display: grid; grid-template-columns: auto 58px auto; align-items: center; gap: 5px; min-width: 157px; padding: 0 7px; color: #43524c; font-size: 8px; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength input { width: 58px; margin: 0; accent-color: #14231f; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength b { color: #718079; font-size: 8px; white-space: nowrap; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group { display: flex; gap: 0; border: 0; background: transparent; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group button { display: grid; width: 32px; height: 32px; min-height: 32px; place-items: center; padding: 0; color: #43524c; border: 1px solid rgba(27, 47, 41, .28); border-right: 0; border-radius: 0; background: #f3f0e7; box-shadow: none; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group button:last-child { border-right: 1px solid rgba(27, 47, 41, .28); }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group button:hover { color: #a34d31; background: #faf8f1; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.health-observatory-main .ecosystem-search-popover { top: 38px; width: 245px; padding: 8px; border: 1px solid rgba(27, 47, 41, .42); border-radius: 2px; background: #faf8f1; box-shadow: 0 12px 28px rgba(20, 35, 31, .16); }
+.health-observatory-main .ecosystem-search-popover > input { border: 1px solid rgba(27, 47, 41, .28); border-radius: 2px; background: #faf8f1; }
+.health-observatory-main .ecosystem-search-results button { border-bottom: 1px solid rgba(27, 47, 41, .15) !important; border-radius: 0 !important; }
+
+.health-observatory-main .ecosystem-stage { position: relative; background: #f3f0e7; }
+.health-observatory-main .ecosystem-canvas {
+  position: relative;
+  isolation: isolate;
+  background-color: #f3f0e7;
+  background-image:
+    linear-gradient(rgba(38, 65, 56, .055) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 65, 56, .055) 1px, transparent 1px),
+    linear-gradient(rgba(38, 65, 56, .026) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 65, 56, .026) 1px, transparent 1px);
+  background-size: 32px 32px, 32px 32px, 8px 8px, 8px 8px;
+}
+.health-observatory-main .ecosystem-canvas::after { display: none; }
+.health-observatory-main .ecosystem-coordinate-guide { position: absolute; z-index: 2; inset: 0; display: block; width: auto; aspect-ratio: auto; border: 0; border-radius: 0; transform: none; box-shadow: none; color: rgba(20, 35, 31, .58); pointer-events: none; }
+.health-observatory-main .ecosystem-coordinate-top { position: absolute; top: 5px; right: 14px; left: 32px; display: grid; grid-template-columns: repeat(10, 1fr); font: 500 8px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+.health-observatory-main .ecosystem-coordinate-top span { text-align: center; }
+.health-observatory-main .ecosystem-coordinate-left { position: absolute; top: 25px; bottom: 76px; left: 8px; display: grid; grid-template-rows: repeat(6, 1fr); align-items: center; font: 500 8px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+.health-observatory-main .ecosystem-graph-viewport { position: absolute; z-index: 1; inset: 22px 7px 66px 25px; overflow: hidden; }
+.health-observatory-main .ecosystem-graph-viewport > div { width: 100%; height: 100%; }
+.health-observatory-main .ecosystem-overlay { color: #718079; background: rgba(243, 240, 231, .92); }
+.health-observatory-main .ecosystem-overlay span { border-color: rgba(52, 117, 95, .16); border-top-color: #34755f; }
+.health-observatory-main .ecosystem-overlay strong { color: #14231f; }
+.health-observatory-main .ecosystem-tooltip { right: 12px; bottom: 72px; width: min(280px, calc(100% - 28px)); padding: 9px; color: #14231f; border: 1px solid rgba(27, 47, 41, .32); border-radius: 2px; background: rgba(250, 248, 241, .96); box-shadow: 0 10px 24px rgba(20, 35, 31, .12); backdrop-filter: none; }
+.health-observatory-main .ecosystem-tooltip-icon,
+.health-observatory-main .ecosystem-tooltip-avatar { border-radius: 50%; }
+.health-observatory-main .ecosystem-tooltip-icon { color: #faf8f1; background: #315b9a; }
+
+.health-observatory-main .ecosystem-mini-map { position: absolute; z-index: 5; right: 12px; bottom: 70px; width: 122px; padding: 5px; border: 1px solid rgba(27, 47, 41, .42); border-radius: 0; background: rgba(250, 248, 241, .9); pointer-events: none; }
+.health-observatory-main .mini-map-field { position: relative; height: 58px; overflow: hidden; border: 1px solid rgba(27, 47, 41, .15); background-image: linear-gradient(rgba(38,65,56,.05) 1px, transparent 1px), linear-gradient(90deg, rgba(38,65,56,.05) 1px, transparent 1px); background-size: 12px 12px; }
+.health-observatory-main .mini-map-field span { position: absolute; display: block; border: 1px solid; border-radius: 48% 55% 42% 58%; opacity: .42; }
+.health-observatory-main .mini-map-field .core { top: 7px; left: 8px; width: 42px; height: 23px; color: #315b9a; background: rgba(49,91,154,.12); }
+.health-observatory-main .mini-map-field .active { bottom: 5px; left: 13px; width: 50px; height: 24px; color: #34755f; background: rgba(52,117,95,.12); }
+.health-observatory-main .mini-map-field .lifecycle { right: 7px; bottom: 10px; width: 43px; height: 29px; color: #c45f3a; background: rgba(196,95,58,.1); }
+.health-observatory-main .mini-map-field i { position: absolute; top: 4px; right: 18px; width: 66px; height: 45px; border: 1px solid #14231f; }
+.health-observatory-main .ecosystem-mini-map small { display: block; margin-top: 3px; color: #718079; font: 500 6px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+
+.health-observatory-main .ecosystem-timeline-dock { position: absolute; z-index: 6; right: 0; bottom: 0; left: 0; }
+.health-observatory-main .ecosystem-timeline-v2 { display: grid; grid-template-columns: 28px 22px auto minmax(150px, 1fr) auto 22px; min-height: 62px; padding: 6px 10px; border: 0; border-top: 2px solid #c9cdcb; border-radius: 0; color: #718079; background: rgba(250, 248, 241, .94); box-shadow: none; backdrop-filter: none; font-size: 8px; }
+.health-observatory-main .ecosystem-timeline-v2 button { display: grid; width: 25px; height: 25px; place-items: center; color: #43524c; border: 1px solid rgba(27, 47, 41, .24); border-radius: 0; background: transparent; }
+.health-observatory-main .ecosystem-timeline-v2 .timeline-play { color: #faf8f1; border-color: #14231f; background: #14231f; }
+.health-observatory-main .ecosystem-timeline input[type='range'] { height: 2px; border-radius: 0; accent-color: #c45f3a; background: #9ca79f; }
+.health-observatory-main .ecosystem-timeline input[type='range']::-webkit-slider-thumb { width: 10px; height: 14px; border: 1px solid #c45f3a; border-radius: 0; background: #faf8f1; box-shadow: none; }
+.health-observatory-main .timeline-track { position: relative; padding-top: 15px; }
+.health-observatory-main .timeline-track > strong { position: absolute; top: -12px; min-width: 52px; padding: 2px 4px; color: #c45f3a; border-radius: 0; background: transparent; font: 700 8px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+.health-observatory-main .timeline-events i { color: #bd842d; }
+.health-observatory-main .timeline-event-legend { color: #718079; }
+
+.health-observatory-main .ecosystem-node-panel-v2 { border: 1px solid rgba(27, 47, 41, .38); border-radius: 2px; background: rgba(250, 248, 241, .98); box-shadow: -8px 10px 24px rgba(20, 35, 31, .11); backdrop-filter: none; }
+.health-observatory-main .ecosystem-mini-metric { border: 1px solid rgba(27, 47, 41, .18); border-radius: 2px; background: rgba(235, 231, 220, .48); }
+.health-observatory-main .ecosystem-profile .node-kind { color: #315b9a; border-radius: 2px; background: rgba(49, 91, 154, .08); }
+.health-observatory-main .ecosystem-signal { border-radius: 2px; color: #34755f; border-color: rgba(52, 117, 95, .28); background: rgba(52, 117, 95, .05); }
+.health-observatory-main .ecosystem-signal.warning,
+.health-observatory-main .ecosystem-signal.risk { color: #a34d31; border-color: rgba(196,95,58,.28); background: rgba(196,95,58,.05); }
+.health-observatory-main .ecosystem-detail-actions button,
+.health-observatory-main .ecosystem-detail-actions a { border-radius: 2px; }
+.health-observatory-main .ecosystem-detail-actions .primary { border-color: #14231f; background: #14231f; }
+.health-observatory-main .ecosystem-notice { color: #8d4a35; border-top-color: rgba(196, 95, 58, .22); background: #f4e9df; }
+.health-observatory-main .ecosystem-meta { padding: 6px 10px; color: #718079; border-top: 1px solid rgba(27, 47, 41, .24); background: #ebe7dc; }
+
+@media (max-width: 1439px) and (min-width: 761px) {
+  .health-observatory-main .ecosystem-heading { grid-template-columns: minmax(165px, 1fr) auto; padding-inline: 9px; }
+  .health-observatory-main .ecosystem-heading .ecosystem-legend { left: 9px; gap: 4px 10px; }
+  .health-observatory-main .ecosystem-controls-v2 { gap: 3px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-mode button { min-width: 34px; padding-inline: 4px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-role-filter select { width: 88px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-strength { grid-template-columns: auto 42px auto; min-width: 128px; padding-inline: 5px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-strength input { width: 42px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group button { width: 29px; }
+}
+
+@media (max-width: 760px) {
+  .health-observatory-main .ecosystem-heading { grid-template-columns: minmax(0, 1fr); padding: 10px 10px 30px; }
+  .health-observatory-main .ecosystem-controls-v2 { margin-top: 4px; overflow-x: auto; }
+  .health-observatory-main .ecosystem-heading .ecosystem-legend { left: 10px; }
+  .health-observatory-main .ecosystem-mini-map { display: none; }
+  .health-observatory-main .ecosystem-timeline-v2 { grid-template-columns: 28px 22px minmax(120px, 1fr) 22px; }
+  .health-observatory-main .ecosystem-timeline-v2 > span,
+  .health-observatory-main .timeline-event-legend { display: none; }
+}
+
+.health-observatory-main .ecosystem-panel:fullscreen { width: 100vw; height: 100vh; }
+.health-observatory-main .ecosystem-panel:fullscreen .ecosystem-stage,
+.health-observatory-main .ecosystem-panel:fullscreen .ecosystem-canvas { height: calc(100vh - 116px) !important; min-height: 560px; }
+/* Observatory ecosystem atlas v4 refinement */
+.health-observatory-main .ecosystem-heading {
+  min-height: 88px;
+  height: 88px;
+  padding: 10px 12px 27px;
+  border-bottom-color: #c9cdcb;
+  background-color: #faf8f1;
+  background-image: radial-gradient(rgba(20,35,31,.035) .55px, transparent .7px);
+  background-size: 7px 7px;
+}
+.health-observatory-main .ecosystem-heading p { font-size: 8px; letter-spacing: .025em; }
+.health-observatory-main .ecosystem-heading .ecosystem-legend { bottom: 7px; font-size: 9px; }
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength,
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength b { font-size: 9px; }
+.health-observatory-main .ecosystem-coordinate-top { font-size: 8px; }
+.health-observatory-main .ecosystem-coordinate-left { font-size: 9px; }
+.health-observatory-main .ecosystem-canvas {
+  background-color: #f3f0e7;
+  background-image:
+    radial-gradient(rgba(20,35,31,.026) .6px, transparent .8px),
+    linear-gradient(rgba(38, 65, 56, .052) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 65, 56, .052) 1px, transparent 1px),
+    linear-gradient(rgba(38, 65, 56, .024) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38, 65, 56, .024) 1px, transparent 1px);
+  background-size: 9px 9px, 32px 32px, 32px 32px, 8px 8px, 8px 8px;
+}
+.health-observatory-main .ecosystem-graph-viewport { inset: 23px 4px 72px 22px; }
+.health-observatory-main .ecosystem-mini-map { bottom: 74px; width: 126px; padding: 5px; }
+.health-observatory-main .mini-map-field { height: 62px; }
+.health-observatory-main .mini-map-field svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.health-observatory-main .mini-map-field path { fill: none; stroke-width: 2.4; opacity: .46; vector-effect: non-scaling-stroke; }
+.health-observatory-main .mini-map-field .mini-map-viewport { fill: rgba(250,248,241,.08); stroke: #14231f; stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+.health-observatory-main .ecosystem-mini-map small { font-size: 7px; }
+
+.health-observatory-main .ecosystem-timeline-v2 {
+  display: grid;
+  grid-template-columns: minmax(150px, auto) 54px minmax(180px, 1fr) 25px;
+  align-items: center;
+  gap: 8px;
+  min-height: 68px;
+  height: 68px;
+  padding: 6px 10px;
+  font-size: 9px;
+}
+.health-observatory-main .timeline-caption { display: grid; grid-template-columns: auto auto; align-items: baseline; gap: 1px 7px; min-width: 0; }
+.health-observatory-main .timeline-caption > strong { min-width: 0; color: #14231f; font: 700 10px "Noto Sans SC", "Microsoft YaHei", sans-serif; }
+.health-observatory-main .timeline-caption > span { color: #718079; font: 600 8px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+.health-observatory-main .timeline-event-legend { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 2px 9px; margin-top: 3px; font-size: 8px; }
+.health-observatory-main .timeline-event-legend .release { color: #34755f; }
+.health-observatory-main .timeline-event-legend .security { color: #bd842d; }
+.health-observatory-main .timeline-event-legend .governance { color: #a94336; }
+.health-observatory-main .timeline-event-legend .contributor { color: #315b9a; }
+.health-observatory-main .timeline-navigation { display: flex; gap: 3px; }
+.health-observatory-main .ecosystem-timeline-v2 button {
+  display: grid;
+  width: 25px;
+  height: 25px;
+  min-width: 0;
+  place-items: center;
+  padding: 0;
+  color: #43524c;
+  border: 1px solid rgba(27, 47, 41, .24);
+  border-radius: 0;
+  background: transparent;
+}
+.health-observatory-main .ecosystem-timeline-v2 .timeline-play { color: #faf8f1; border-color: #14231f; background: #14231f; }
+.health-observatory-main .timeline-month-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--timeline-month-count), minmax(17px, 1fr));
+  align-self: stretch;
+  min-width: 0;
+  overflow: visible;
+  border-top: 1px solid rgba(27,47,41,.35);
+}
+.health-observatory-main .timeline-month-grid > button {
+  position: relative;
+  display: block;
+  width: auto;
+  height: 100%;
+  min-width: 0;
+  border: 0;
+  border-right: 1px solid rgba(27,47,41,.12);
+}
+.health-observatory-main .timeline-month-grid > button:hover,
+.health-observatory-main .timeline-month-grid > button.active { background: rgba(196,95,58,.06); }
+.health-observatory-main .timeline-month-grid > button.active::after {
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #c45f3a;
+  transform: translate(-50%, -50%);
+  content: '';
+}
+.health-observatory-main .timeline-tick { position: absolute; top: -1px; left: 50%; width: 1px; height: 5px; background: rgba(20,35,31,.42); }
+.health-observatory-main .timeline-event-stack { position: absolute; top: 9px; right: 1px; left: 1px; display: flex; justify-content: center; gap: 1px; font: 700 8px/1 "IBM Plex Mono", monospace; }
+.health-observatory-main .timeline-event-stack i { font-style: normal; }
+.health-observatory-main .timeline-event-stack .release { color: #34755f; }
+.health-observatory-main .timeline-event-stack .security { color: #bd842d; }
+.health-observatory-main .timeline-event-stack .governance { color: #a94336; }
+.health-observatory-main .timeline-event-stack .contributor { color: #315b9a; }
+.health-observatory-main .timeline-month-grid strong {
+  position: absolute;
+  right: 0;
+  bottom: 2px;
+  left: 0;
+  min-width: 0;
+  overflow: visible;
+  color: #718079;
+  font: 500 8px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  white-space: nowrap;
+}
+.health-observatory-main .timeline-month-grid > button:first-child strong { text-align: left; }
+.health-observatory-main .timeline-month-grid > button:last-child strong { text-align: right; }
+.health-observatory-main .timeline-month-grid > button.active strong { color: #c45f3a; font-weight: 800; }
+.health-observatory-main .ecosystem-meta { font-size: 9px; }
+
+@media (max-width: 1439px) and (min-width: 1200px) {
+  .health-observatory-main .ecosystem-heading { padding-inline: 9px; }
+  .health-observatory-main .ecosystem-heading .ecosystem-legend { left: 9px; gap: 4px 9px; font-size: 8px; }
+  .health-observatory-main .ecosystem-timeline-v2 { grid-template-columns: 122px 54px minmax(150px, 1fr) 25px; gap: 5px; }
+  .health-observatory-main .timeline-caption > span { display: none; }
+}
+@media (max-width: 1199px) {
+  .health-observatory-main .ecosystem-timeline-v2 { grid-template-columns: 148px 54px minmax(180px, 1fr) 25px; }
+}
+@media (max-width: 760px) {
+  .health-observatory-main .ecosystem-timeline-v2 { grid-template-columns: 54px minmax(160px, 1fr) 25px; }
+  .health-observatory-main .timeline-caption { display: none; }
+}
+
+/* Ecosystem relation-skeleton v6 */
+.health-observatory-main .ecosystem-canvas {
+  background-color: #f5f1e7;
+  background-image:
+    radial-gradient(rgba(20,35,31,.018) .55px, transparent .75px),
+    linear-gradient(rgba(38,65,56,.052) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38,65,56,.052) 1px, transparent 1px),
+    linear-gradient(rgba(38,65,56,.022) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(38,65,56,.022) 1px, transparent 1px);
+  background-size: 7px 7px, 120px 120px, 120px 120px, 24px 24px, 24px 24px;
+}
+.health-observatory-main .ecosystem-coordinate-top { top: 7px; left: 28px; color: rgba(20,35,31,.48); }
+.health-observatory-main .ecosystem-coordinate-left { top: 27px; bottom: 78px; left: 8px; color: rgba(20,35,31,.48); }
+.health-observatory-main .ecosystem-graph-viewport { inset: 22px 8px 72px 24px; }
+
+.health-observatory-main .network-encoding-legend {
+  position: absolute;
+  z-index: 6;
+  top: 34px;
+  right: 12px;
+  width: 136px;
+  padding: 8px 9px 7px;
+  color: #43524c;
+  border: 1px solid rgba(27,47,41,.25);
+  background: rgba(250,248,241,.9);
+  box-shadow: none;
+  pointer-events: none;
+  font: 600 10px/1.35 "Noto Sans SC", "Microsoft YaHei", sans-serif;
+}
+.health-observatory-main .network-encoding-legend strong {
+  display: block;
+  margin-bottom: 5px;
+  color: #172a25;
+  font: 700 10px/1.2 "IBM Plex Mono", Consolas, monospace;
+  letter-spacing: .05em;
+}
+.health-observatory-main .network-legend-section { display: grid; grid-template-columns: 1fr; gap: 4px; padding: 4px 0; border-top: 1px solid rgba(27,47,41,.12); }
+.health-observatory-main .network-legend-section span { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.health-observatory-main .network-legend-section i { display: inline-block; flex: 0 0 28px; }
+.health-observatory-main .network-legend-section .edge { height: 0; border-top-style: solid; border-top-color: #43524c; }
+.health-observatory-main .network-legend-section .edge.high { border-top-width: 3px; opacity: .9; }
+.health-observatory-main .network-legend-section .edge.medium { border-top-width: 2px; opacity: .55; }
+.health-observatory-main .network-legend-section .edge.low { border-top-width: 1px; opacity: .28; }
+.health-observatory-main .network-legend-section .density { height: 7px; border: 1px solid #60927d; border-radius: 50%; }
+.health-observatory-main .network-legend-section .density.high { opacity: .72; box-shadow: inset 0 0 0 2px rgba(96,146,125,.12); }
+.health-observatory-main .network-legend-section .density.medium { opacity: .46; }
+.health-observatory-main .network-legend-section .density.low { opacity: .24; }
+
+.health-observatory-main .ecosystem-mini-map { right: 12px; bottom: 78px; width: 145px; padding: 5px; background: rgba(250,248,241,.92); }
+.health-observatory-main .mini-map-field { height: 88px; }
+.health-observatory-main .mini-map-field path { stroke-width: 1.4; opacity: .5; }
+.health-observatory-main .mini-map-field circle { stroke: rgba(250,248,241,.9); stroke-width: .9; vector-effect: non-scaling-stroke; }
+.health-observatory-main .mini-map-field .mini-map-viewport { fill: rgba(189,96,71,.035); stroke: #bd6047; stroke-width: 1.3; }
+
+@media (max-width: 1199px) {
+  .health-observatory-main .network-encoding-legend { top: 31px; right: 8px; width: 126px; }
+}
+@media (max-width: 760px) {
+  .health-observatory-main .network-encoding-legend { display: none; }
+}
+/* Ecosystem vertical-space refinement v7 */
+.health-observatory-main .ecosystem-stage,
+.health-observatory-main .ecosystem-canvas {
+  min-height: 540px;
+  height: 540px;
+}
+.health-observatory-main .ecosystem-timeline-v2 {
+  min-height: 52px;
+  height: 52px;
+  padding-block: 4px;
+}
+.health-observatory-main .ecosystem-timeline-v2 button {
+  height: 23px;
+}
+.health-observatory-main .timeline-event-legend {
+  gap: 1px 8px;
+  margin-top: 1px;
+  font-size: 7px;
+}
+.health-observatory-main .ecosystem-graph-viewport {
+  inset: 22px 8px 56px 24px;
+}
+.health-observatory-main .ecosystem-coordinate-left {
+  bottom: 60px;
+}
+.health-observatory-main .ecosystem-tooltip {
+  bottom: 58px;
+}
+.health-observatory-main .ecosystem-mini-map {
+  bottom: 58px;
+}
+
+@media (max-width: 760px) {
+  .health-observatory-main .ecosystem-stage,
+  .health-observatory-main .ecosystem-canvas {
+    min-height: 600px;
+    height: 600px;
+  }
+}
+/* Ecosystem compact timeline v8 */
+.health-observatory-main .ecosystem-timeline-dock {
+  height: 36px;
+}
+.health-observatory-main .ecosystem-timeline-v2 {
+  min-height: 36px;
+  height: 36px;
+  max-height: 36px;
+  box-sizing: border-box;
+  gap: 6px;
+  padding: 3px 8px;
+  overflow: hidden;
+}
+.health-observatory-main .ecosystem-timeline-v2 button {
+  height: 21px;
+}
+.health-observatory-main .timeline-caption {
+  line-height: 1.05;
+}
+.health-observatory-main .timeline-caption > strong {
+  font-size: 9px;
+}
+.health-observatory-main .timeline-event-legend {
+  margin-top: 0;
+  line-height: 1;
+}
+.health-observatory-main .ecosystem-graph-viewport {
+  inset: 22px 8px 40px 24px;
+}
+.health-observatory-main .ecosystem-coordinate-left {
+  bottom: 44px;
+}
+.health-observatory-main .ecosystem-tooltip,
+.health-observatory-main .ecosystem-mini-map {
+  bottom: 42px;
+}
+/* Observatory ecosystem controls v5 — match the approved compact toolbar. */
+.health-observatory-main .ecosystem-controls-v2 {
+  gap: 20px;
+  min-height: 30px;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-mode,
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-role-filter,
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength,
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group {
+  min-height: 30px;
+  height: 30px;
+  border-radius: 0;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-mode {
+  border-color: rgba(27, 47, 41, .42);
+  background: rgba(250, 248, 241, .58);
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-mode button {
+  min-width: 42px;
+  min-height: 28px;
+  height: 28px;
+  padding: 0 9px;
+  border: 0;
+  border-right: 1px solid rgba(27, 47, 41, .28);
+  color: #43524c;
+  background: transparent;
+  font-size: 9px;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-mode button.active {
+  color: #faf8f1;
+  background: #a34d31;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-role-filter {
+  width: 104px;
+  border-color: rgba(27, 47, 41, .34);
+  background: rgba(250, 248, 241, .58);
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-role-filter select {
+  width: 102px;
+  height: 28px;
+  padding: 0 24px 0 9px;
+  color: #43524c;
+  background-color: transparent;
+  font-size: 9px;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength {
+  grid-template-columns: auto 88px auto;
+  gap: 8px;
+  min-width: 186px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength input {
+  width: 88px;
+  height: 2px;
+  margin: 0;
+  accent-color: #14231f;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-strength b {
+  color: #5f6d67;
+  font-size: 9px;
+  font-weight: 600;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group {
+  gap: 13px;
+  height: 30px;
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group button,
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group button:last-child {
+  width: 30px;
+  height: 30px;
+  min-height: 30px;
+  color: #263b34;
+  border: 1px solid rgba(27, 47, 41, .34);
+  background: rgba(250, 248, 241, .58);
+}
+.health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group svg { width: 14px; height: 14px; }
+
+@media (max-width: 1199px) {
+  .health-observatory-main .ecosystem-controls-v2 { gap: 8px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-mode button { min-width: 36px; padding-inline: 5px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-role-filter { width: 92px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-role-filter select { width: 90px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-strength { grid-template-columns: auto 48px auto; min-width: 138px; gap: 5px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-strength input { width: 48px; }
+  .health-observatory-main .ecosystem-controls-v2 .ecosystem-command-group { gap: 6px; }
+}

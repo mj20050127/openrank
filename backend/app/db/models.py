@@ -116,6 +116,10 @@ class HealthOverviewDaily(Base):
 
 class MetricPoint(Base):
     __tablename__ = "metric_points"
+    __table_args__ = (
+        UniqueConstraint("repo", "metric", "dt", name="uq_metric_points_repo_metric_dt"),
+        Index("ix_metric_points_repo_dt", "repo", "dt"),
+    )
     id = Column(Integer, primary_key=True, autoincrement=True)
     repo = Column(Text, nullable=False, index=True)
     metric = Column(Text, nullable=False, index=True)
@@ -123,6 +127,175 @@ class MetricPoint(Base):
     value = Column(Float)
     source = Column(Text, default="opendigger")
     updated_at = Column(TIMESTAMP, server_default=func.now())
+
+
+class RepositoryDataStatus(Base):
+    __tablename__ = "repository_data_status"
+    __table_args__ = ({"schema": "openrank"},)
+
+    repo = Column(Text, primary_key=True)
+    scope = Column(Text, nullable=False, default="user", index=True)
+    enabled = Column(Boolean, nullable=False, default=True)
+    opendigger_supported = Column(Boolean)
+    sync_status = Column(Text, nullable=False, default="pending", index=True)
+    first_month = Column(Date)
+    latest_month = Column(Date)
+    metric_count = Column(Integer, nullable=False, default=0)
+    month_count = Column(Integer, nullable=False, default=0)
+    coverage_ratio = Column(Float)
+    last_full_sync_at = Column(TIMESTAMP(timezone=True))
+    last_monthly_sync_at = Column(TIMESTAMP(timezone=True))
+    last_error = Column(Text)
+    metadata_json = Column(JSONType)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class RepositoryMetricStatus(Base):
+    __tablename__ = "repository_metric_status"
+    __table_args__ = (
+        UniqueConstraint("repo", "metric", name="uq_repository_metric_status"),
+        Index("ix_repository_metric_status_repo", "repo"),
+        {"schema": "openrank"},
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    repo = Column(Text, nullable=False)
+    metric = Column(Text, nullable=False)
+    filename = Column(Text, nullable=False)
+    source_status = Column(Text, nullable=False, default="pending")
+    first_month = Column(Date)
+    latest_month = Column(Date)
+    source_key_count = Column(Integer, nullable=False, default=0)
+    database_key_count = Column(Integer, nullable=False, default=0)
+    missing_keys = Column(JSONType)
+    extra_keys = Column(JSONType)
+    source_digest = Column(Text)
+    last_error = Column(Text)
+    last_synced_at = Column(TIMESTAMP(timezone=True))
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class IngestionJob(Base):
+    __tablename__ = "ingestion_jobs"
+    __table_args__ = (
+        Index("ix_ingestion_jobs_repo_created", "repo", "created_at"),
+        {"schema": "openrank"},
+    )
+
+    id = Column(Text, primary_key=True)
+    repo = Column(Text, nullable=False, index=True)
+    job_type = Column(Text, nullable=False)
+    status = Column(Text, nullable=False, default="queued", index=True)
+    stage = Column(Text, nullable=False, default="queued")
+    progress = Column(Float, nullable=False, default=0.0)
+    current_metric = Column(Text)
+    requested_by = Column(Text, nullable=False, default="user")
+    attempts = Column(Integer, nullable=False, default=0)
+    result_json = Column(JSONType)
+    error = Column(Text)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    started_at = Column(TIMESTAMP(timezone=True))
+    finished_at = Column(TIMESTAMP(timezone=True))
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class CurrentRepoAssessment(Base):
+    __tablename__ = "current_repo_assessments"
+    __table_args__ = ({"schema": "openrank"},)
+
+    repo = Column(Text, primary_key=True)
+    score_version = Column(Text, nullable=False, default="current-v1")
+    window_days = Column(Integer, nullable=False, default=90)
+    score_vitality = Column(Float)
+    score_responsiveness = Column(Float)
+    score_resilience = Column(Float)
+    score_governance = Column(Float)
+    score_security = Column(Float)
+    score_comprehensive = Column(Float)
+    completeness = Column(Float, nullable=False, default=0.0)
+    confidence = Column(Float, nullable=False, default=0.0)
+    evidence_json = Column(JSONType)
+    risks_json = Column(JSONType)
+    source_times_json = Column(JSONType)
+    source_status_json = Column(JSONType)
+    observed_at = Column(TIMESTAMP(timezone=True), nullable=False)
+    expires_at = Column(TIMESTAMP(timezone=True), nullable=False)
+    last_attempt_at = Column(TIMESTAMP(timezone=True))
+    last_error = Column(Text)
+    created_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    updated_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
+
+
+class RepoMonthlyAudit(Base):
+    __tablename__ = "repo_monthly_audits"
+    __table_args__ = (
+        UniqueConstraint("repo", "metric_month", name="uq_repo_monthly_audit"),
+        Index("ix_repo_monthly_audit_month", "metric_month"),
+        {"schema": "openrank"},
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    repo = Column(Text, nullable=False, index=True)
+    metric_month = Column(Date, nullable=False)
+    governance_score = Column(Float)
+    security_score = Column(Float)
+    completeness = Column(Float, nullable=False, default=0.0)
+    governance_evidence = Column(JSONType)
+    security_evidence = Column(JSONType)
+    status = Column(Text, nullable=False, default="complete")
+    source = Column(Text, nullable=False, default="github_scorecard")
+    observed_at = Column(TIMESTAMP(timezone=True), nullable=False)
+    collected_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+    error = Column(Text)
+
+
+class RepoMonthlyAssessment(Base):
+    __tablename__ = "repo_monthly_assessments"
+    __table_args__ = (
+        UniqueConstraint("repo", "metric_month", "score_version", name="uq_repo_monthly_assessment"),
+        Index("ix_repo_monthly_assessment_month_version", "metric_month", "score_version"),
+        {"schema": "openrank"},
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    repo = Column(Text, nullable=False, index=True)
+    metric_month = Column(Date, nullable=False)
+    score_version = Column(Text, nullable=False)
+    score_vitality = Column(Float)
+    score_responsiveness = Column(Float)
+    score_resilience = Column(Float)
+    score_community = Column(Float)
+    score_governance = Column(Float)
+    score_security = Column(Float)
+    score_comprehensive = Column(Float)
+    community_completeness = Column(Float, nullable=False, default=0.0)
+    comprehensive_completeness = Column(Float, nullable=False, default=0.0)
+    evidence_json = Column(JSONType)
+    source_updated_at = Column(TIMESTAMP(timezone=True))
+    computed_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
+
+class RepoDailySnapshot(Base):
+    __tablename__ = "repo_daily_snapshots"
+    __table_args__ = (
+        UniqueConstraint("repo", "observed_date", name="uq_repo_daily_snapshot_date"),
+        Index("ix_repo_daily_snapshot_repo_date", "repo", "observed_date"),
+        {"schema": "openrank"},
+    )
+
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    repo = Column(Text, nullable=False)
+    observed_date = Column(Date, nullable=False)
+    stars = Column(BigInteger)
+    forks = Column(BigInteger)
+    open_issues = Column(Integer)
+    open_pull_requests = Column(Integer)
+    pushed_at = Column(TIMESTAMP(timezone=True))
+    status = Column(Text, nullable=False, default="ok")
+    error = Column(Text)
+    source = Column(Text, nullable=False, default="github_rest")
+    source_updated_at = Column(TIMESTAMP(timezone=True))
+    fetched_at = Column(TIMESTAMP(timezone=True), server_default=func.now(), nullable=False)
 
 class RepoSnapshot(Base):
     __tablename__ = "repo_snapshots"

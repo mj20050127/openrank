@@ -35,8 +35,8 @@ class GitHubFetchService:
         self,
         db: Session,
         github_client: Optional[GitHubClient] = None,
-        issue_ttl_hours: int = 6,
-        content_ttl_hours: int = 6,
+        issue_ttl_hours: int = 12,
+        content_ttl_hours: int = 12,
     ) -> None:
         self.db = db
         self.github = github_client or GitHubClient()

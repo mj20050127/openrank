@@ -1,0 +1,72 @@
+.contributor-pareto-panel { display: flex; flex-direction: column; container-type: inline-size; }
+.pareto-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 9px; }
+.pareto-heading-actions { display: flex; flex: 0 0 auto; align-items: center; gap: 5px; }
+.pareto-heading h2 { margin: 3px 0 0; font-size: 15px; line-height: 1.15; }
+.pareto-month { flex: 0 0 auto; padding: 3px 0; color: #718079; background: transparent; font: 600 9px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+.pareto-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)) auto; align-items: center; margin-top: 5px; border-top: 1px solid rgba(27, 47, 41, .18); border-bottom: 1px solid rgba(27, 47, 41, .18); }
+.pareto-summary > div { min-width: 0; padding: 6px 8px; border-right: 1px solid rgba(27, 47, 41, .18); border-radius: 0; background: transparent; }
+.pareto-summary span,
+.pareto-summary strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pareto-summary span { color: #718079; font-size: 9px; }
+.pareto-summary strong { margin-top: 2px; color: #14231f; font: 700 15px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+.pareto-status { margin: 0 7px; padding: 4px 6px; border: 1px solid rgba(27, 47, 41, .2); border-radius: 2px; background: transparent; font-size: 9px; font-style: normal; font-weight: 700; white-space: nowrap; }
+.pareto-status.balanced { color: #34755f; }
+.pareto-status.attention { color: #9b6618; }
+.pareto-status.high { color: #a94336; }
+.pareto-visual-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(118px, 28%); flex: 1; min-height: 0; gap: 10px; margin-top: 5px; }
+.contributor-pareto-chart { width: 100%; min-width: 0; min-height: 0; height: 224px !important; margin: 0; }
+.pareto-top-table { width: 100%; align-self: center; table-layout: fixed; border-collapse: collapse; color: #43524c; font-size: 10.5px; line-height: 1.25; }
+.pareto-top-table caption { padding: 0 0 6px; color: #14231f; font: 700 9px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; text-align: left; }
+.pareto-top-table th,
+.pareto-top-table td { height: 27px; box-sizing: border-box; padding: 5px 4px; overflow: hidden; border-bottom: 1px solid rgba(27, 47, 41, .15); text-align: right; text-overflow: ellipsis; white-space: nowrap; }
+.pareto-top-table th { color: #718079; font-weight: 600; }
+.pareto-top-table th:first-child,
+.pareto-top-table td:first-child { width: 20px; text-align: left; }
+.pareto-top-table th:nth-child(2),
+.pareto-top-table td:nth-child(2) { text-align: left; }
+.pareto-top-table th:last-child,
+.pareto-top-table td:last-child { width: 44px; }
+.pareto-empty { display: grid; flex: 1; align-content: center; justify-items: center; min-height: 160px; padding: 18px; color: #718079; text-align: center; }
+.pareto-empty strong { color: #43524c; font-size: 12px; }
+.pareto-empty span { margin-top: 7px; font-size: 9px; }
+.contributor-pareto-panel:fullscreen { box-sizing: border-box; width: 100vw; height: 100vh; padding: 24px !important; overflow: hidden; border: 0 !important; background: #faf8f1 !important; }
+.contributor-pareto-panel:fullscreen .pareto-heading h2 { font-size: 24px !important; }
+.contributor-pareto-panel:fullscreen .pareto-month { font-size: 12px; }
+.contributor-pareto-panel:fullscreen .pareto-summary { margin-top: 14px; }
+.contributor-pareto-panel:fullscreen .pareto-summary > div { padding: 10px 13px; }
+.contributor-pareto-panel:fullscreen .pareto-summary span { font-size: 11px; }
+.contributor-pareto-panel:fullscreen .pareto-summary strong { font-size: 18px; }
+.contributor-pareto-panel:fullscreen .pareto-status { padding: 7px 10px; font-size: 11px; }
+.contributor-pareto-panel:fullscreen .pareto-visual-grid { grid-template-columns: minmax(0, 1fr) 230px; gap: 24px; margin-top: 14px; }
+.contributor-pareto-panel:fullscreen .contributor-pareto-chart { height: auto !important; min-height: 540px; }
+.contributor-pareto-panel:fullscreen .pareto-top-table { font-size: 12px; }
+.contributor-pareto-panel:fullscreen .pareto-top-table caption { font-size: 12px; }
+.contributor-pareto-panel:fullscreen .pareto-top-table th,
+.contributor-pareto-panel:fullscreen .pareto-top-table td { padding: 9px 6px; }
+@container (max-width: 390px) {
+  .pareto-visual-grid { grid-template-columns: minmax(0, 1fr) 106px; gap: 5px; }
+  .pareto-top-table { font-size: 10.5px; }
+  .pareto-top-table th:last-child,
+  .pareto-top-table td:last-child { width: 39px; }
+}
+@media (max-width: 1199px) and (min-width: 701px) {
+  .pareto-visual-grid { grid-template-columns: minmax(0, 1fr) 150px; }
+  .contributor-pareto-chart { height: 238px !important; }
+}
+@media (max-width: 700px) {
+  .pareto-visual-grid { grid-template-columns: minmax(0, 1fr) 128px; }
+  .contributor-pareto-chart { height: 240px !important; }
+}
+@media (max-width: 460px) {
+  .pareto-summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .pareto-status { grid-column: 1 / -1; justify-self: start; margin: 5px; }
+  .pareto-visual-grid { grid-template-columns: minmax(0, 1fr); }
+  .pareto-top-table { display: none; }
+}
+
+/* Bus Factor full-width chart v5 */
+.pareto-visual-grid,
+.contributor-pareto-panel:fullscreen .pareto-visual-grid {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+}

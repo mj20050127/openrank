@@ -1,0 +1,39 @@
+.chart-fullscreen-button {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 31px;
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid #d9e4ef;
+  border-radius: 7px;
+  color: #5f7690;
+  background: #fff;
+  cursor: pointer;
+  font-size: 9px;
+  font-weight: 600;
+  transition: color .16s ease, border-color .16s ease, background .16s ease;
+}
+
+.chart-fullscreen-button:hover {
+  color: #286edb;
+  border-color: #a9c7ec;
+  background: #f2f7ff;
+}
+
+.chart-fullscreen-button svg {
+  width: 13px;
+  height: 13px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (max-width: 1240px) {
+  .chart-fullscreen-button { width: 28px; min-width: 28px; padding: 0; }
+  .chart-fullscreen-button span { display: none; }
+}

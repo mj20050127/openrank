@@ -28,3 +28,6 @@ networkx>=3.3,<4.0
 
 # Math/Stats for trend analysis
 numpy>=1.24,<3.0
+
+# Historical OpenSSF Scorecard public dataset
+google-cloud-bigquery>=3.25,<4.0

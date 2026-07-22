@@ -1,0 +1,40 @@
+.health-radar-svg {
+  display: block;
+  width: 100%;
+  height: clamp(205px, 24vh, 248px);
+  min-width: 0;
+  overflow: visible;
+}
+.health-radar-label {
+  fill: #43524c;
+  font: 650 13px "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif;
+  cursor: pointer;
+  user-select: none;
+}
+.health-radar-label.selected { fill: #a34d31; font-weight: 800; }
+.health-radar-label-score { fill: #14231f; font: 750 14px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+.health-radar-label-baseline { fill: #718079; font-size: 8px; font-weight: 500; }
+.health-radar-delta { font-size: 8px; font-weight: 700; }
+.health-radar-delta.up { fill: #34755f; }
+.health-radar-delta.down { fill: #c45f3a; }
+.health-radar-hit-target { fill: transparent; cursor: pointer; }
+.health-radar-legend text { fill: #718079; font: 500 8px "Noto Sans SC", "Microsoft YaHei", system-ui, sans-serif; }
+.dimension-panel:fullscreen {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+  box-sizing: border-box;
+  padding: 24px !important;
+  overflow: hidden;
+  border: 0 !important;
+  background: #faf8f1 !important;
+}
+.dimension-panel:fullscreen .radar-panel-title { min-height: 58px; }
+.dimension-panel:fullscreen .radar-panel-title h2 { font-size: 24px !important; }
+.health-context-column .dimension-panel:fullscreen .radar-compact-body { flex: 1; }
+.health-context-column .dimension-panel:fullscreen .health-radar-svg { height: min(78vh, 760px); }
+.health-context-column .dimension-panel:fullscreen .diagnosis-summary { padding: 12px 14px; font-size: 13px; }
+@media (max-width: 1439px) { .health-radar-svg { height: 206px; } }
+@media (max-width: 1199px) { .health-radar-svg { height: 238px; } }
+@media (max-width: 700px) { .health-radar-svg { height: 230px; } }

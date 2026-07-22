@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db.models import HealthOverviewDaily
+from app.db.models import MetricPoint, RepositoryDataStatus
 from app.models import RepoCatalog, RepoDoc, RepoIssue
 from app.services.github_fetch import GitHubFetchService, freshness_score
 from app.services.newcomer_scoring import (
@@ -117,8 +117,13 @@ class NewcomerPlanService:
     # Recall & load
     # ---------------------------------------------------------
     def _recall_candidates(self, domain: str, stack: str, keywords: List[str]) -> List[CandidateRepo]:
-        # widen recall window to scan more rows
-        rows = self.db.execute(select(RepoCatalog).order_by(RepoCatalog.repo_full_name).limit(self.RECALL_LIMIT * 5)).scalars().all()
+        # Scan the complete curated catalog before applying the user profile.
+        rows = self.db.execute(
+            select(RepoCatalog)
+            .join(RepositoryDataStatus, RepositoryDataStatus.repo == RepoCatalog.repo_full_name)
+            .where(RepositoryDataStatus.scope == "curated", RepositoryDataStatus.enabled.is_(True))
+            .order_by(RepoCatalog.repo_full_name)
+        ).scalars().all()
         domain_lower = (domain or "").lower()
         stack_lower = (stack or "").lower()
 
@@ -154,9 +159,6 @@ class NewcomerPlanService:
             return True
 
         candidates_all = [build_candidate(r) for r in rows]
-        # cap candidates to avoid slow scoring when domain/stack过宽
-        if len(candidates_all) > 80:
-            candidates_all = candidates_all[:80]
         strict_results = [c for c in candidates_all if strict_match(c)]
         if len(strict_results) >= self.RETURN_LIMIT:
             return strict_results[: self.RECALL_LIMIT]
@@ -188,48 +190,61 @@ class NewcomerPlanService:
     def _load_latest_metrics(self, repos: Sequence[str]):
         if not repos:
             return {}, (None, None), (None, None)
-        ho = HealthOverviewDaily
+        wanted = {"issue_response_time", "change_request_response_time", "issue_age", "change_request_age", "new_contributors", "openrank"}
         ranked = (
             select(
-                ho.repo_full_name,
-                ho.dt,
-                ho.metric_issue_response_time_h,
-                ho.metric_pr_response_time_h,
-                ho.metric_issue_age_h,
-                ho.metric_pr_age_h,
-                ho.metric_activity_3m,
-                ho.metric_activity_growth,
-                ho.metric_new_contributors,
-                ho.metric_openrank,
-                func.row_number().over(partition_by=ho.repo_full_name, order_by=ho.dt.desc()).label("rn"),
+                MetricPoint.repo,
+                MetricPoint.metric,
+                MetricPoint.dt,
+                MetricPoint.value,
+                func.row_number().over(
+                    partition_by=(MetricPoint.repo, MetricPoint.metric),
+                    order_by=MetricPoint.dt.desc(),
+                ).label("rn"),
             )
-            .where(ho.repo_full_name.in_(repos))
+            .where(MetricPoint.repo.in_(repos), MetricPoint.metric.in_(wanted))
         ).subquery()
+        latest_rows = self.db.execute(select(ranked).where(ranked.c.rn == 1)).mappings().all()
+        values: Dict[str, Dict[str, Any]] = {}
+        for row in latest_rows:
+            bucket = values.setdefault(row["repo"], {"dt": row["dt"]})
+            bucket[row["metric"]] = row["value"]
+            if row["dt"] and row["dt"] > bucket["dt"]:
+                bucket["dt"] = row["dt"]
 
-        rows = self.db.execute(select(ranked).where(ranked.c.rn == 1)).mappings()
+        activity_rows = self.db.execute(
+            select(MetricPoint.repo, MetricPoint.dt, MetricPoint.value)
+            .where(MetricPoint.repo.in_(repos), MetricPoint.metric == "activity")
+            .order_by(MetricPoint.repo, MetricPoint.dt)
+        ).all()
+        activity: Dict[str, List[float]] = {}
+        for repo_name, _, value in activity_rows:
+            activity.setdefault(repo_name, []).append(float(value or 0))
+
         metrics_map: Dict[str, RepoMetrics] = {}
         resp_values: List[float] = []
         activity_values: List[float] = []
-        for row in rows:
+        for repo_name in repos:
+            raw = values.get(repo_name, {})
+            series = activity.get(repo_name, [])
+            latest_3m = sum(series[-3:]) if series else None
+            previous_3m = sum(series[-6:-3]) if len(series) >= 6 else None
+            growth = (latest_3m - previous_3m) / previous_3m if latest_3m is not None and previous_3m else None
             metrics = RepoMetrics(
-                repo_full_name=row["repo_full_name"],
-                dt=row["dt"].isoformat() if row["dt"] else None,
-                metric_issue_response_time_h=row["metric_issue_response_time_h"],
-                metric_pr_response_time_h=row["metric_pr_response_time_h"],
-                metric_issue_age_h=row["metric_issue_age_h"],
-                metric_pr_age_h=row["metric_pr_age_h"],
-                metric_activity_3m=row["metric_activity_3m"],
-                metric_activity_growth=row["metric_activity_growth"],
-                metric_new_contributors=row["metric_new_contributors"],
-                metric_openrank=row["metric_openrank"],
+                repo_full_name=repo_name,
+                dt=raw.get("dt").isoformat() if raw.get("dt") else None,
+                metric_issue_response_time_h=raw.get("issue_response_time"),
+                metric_pr_response_time_h=raw.get("change_request_response_time"),
+                metric_issue_age_h=raw.get("issue_age"),
+                metric_pr_age_h=raw.get("change_request_age"),
+                metric_activity_3m=latest_3m,
+                metric_activity_growth=growth,
+                metric_new_contributors=raw.get("new_contributors"),
+                metric_openrank=raw.get("openrank"),
             )
-            metrics_map[row["repo_full_name"]] = metrics
-            for value in [metrics.metric_issue_response_time_h, metrics.metric_pr_response_time_h, metrics.metric_issue_age_h, metrics.metric_pr_age_h]:
-                if value is not None:
-                    resp_values.append(value)
-            for value in [metrics.metric_activity_3m, metrics.metric_activity_growth, metrics.metric_new_contributors]:
-                if value is not None:
-                    activity_values.append(value)
+            metrics_map[repo_name] = metrics
+            resp_values.extend(value for value in [metrics.metric_issue_response_time_h, metrics.metric_pr_response_time_h, metrics.metric_issue_age_h, metrics.metric_pr_age_h] if value is not None)
+            activity_values.extend(value for value in [metrics.metric_activity_3m, metrics.metric_activity_growth, metrics.metric_new_contributors] if value is not None)
 
         resp_p = (percentile(resp_values, 10), percentile(resp_values, 90))
         activity_p = (percentile(activity_values, 10), percentile(activity_values, 90))

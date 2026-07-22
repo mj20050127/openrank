@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import ReactECharts from 'echarts-for-react';
 import { marked } from 'marked';
@@ -5,16 +6,21 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import './App.css';
 import TrendMonitor from './pages/TrendMonitor';
+import RepositoryGovernanceDashboard from './pages/RepositoryGovernanceDashboard';
+import HealthRankingRail from './components/governance/HealthRankingRail';
 import {
-  refreshTodayHealth,
+  refreshMonthlyRepository,
+  fetchRepositoryCatalog,
+  fetchHealthRanking,
   refreshHealth,
   fetchLatestHealthOverview,
-  fetchDataEaseDashboardUrl,
   postNewcomerPlan,
   fetchNewcomerIssues,
   postTaskBundle,
   fetchTrend,
   bootstrapHealth,
+  importRepository,
+  fetchImportJob,
   fetchHealthReport,
   fetchNewcomerReport,
   fetchTrendReport,
@@ -59,7 +65,7 @@ const initialMessages = [
     role: 'assistant',
     text: `🎉 欢迎使用 OpenSage AI —— 这一刻，数据拥有了预测未来的能力。
 
-我由华东师范大学 "爱错"团队 研发，不仅是查库工具，更是您的 开源治理数字参谋。深度融合 OpenDigger 实时数据 与 MaxKB 专家智库，打破了“只看数据，不懂决策”的壁垒。
+我由华东师范大学“爱错”团队研发，是面向开源社区月度数据的治理分析与新人贡献决策助手。
 
 ## 🚀 核心优势（为什么选择我？）
 - 📐 行业标尺：内置全域项目 P50/P80 水位线，一眼看清项目处于行业头部还是尾部。
@@ -134,18 +140,16 @@ function extractTop5Share(payload) {
   return null;
 }
 
-function buildAttachParams(repoFullName) {
-  const payload = { repo_full_name: repoFullName };
-  const json = JSON.stringify(payload);
-  return btoa(unescape(encodeURIComponent(json)));
-}
 
 function App() {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedRepo, setSelectedRepo] = useState('microsoft/vscode');
+  const [selectedRepo, setSelectedRepo] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get('repo');
+    return requested && /^[^/]+\/[^/]+$/.test(requested) ? requested : 'microsoft/vscode';
+  });
   const [domain, setDomain] = useState('frontend');
   const [stack, setStack] = useState('javascript');
   const [timePerWeek, setTimePerWeek] = useState('1-2h');
@@ -173,17 +177,21 @@ function App() {
       setIssuesBoard(plan.issues_board || null);
     }
   }, [plan]);
-  const [activeNav, setActiveNav] = useState('ai');
+  const [activeNav, setActiveNav] = useState(() => {
+    const requested = new URLSearchParams(window.location.search).get('view');
+    return ['ai', 'health', 'benchmark', 'trend'].includes(requested) ? requested : 'health';
+  });
+  const [repositoryCatalog, setRepositoryCatalog] = useState([]);
+  const [healthRanking, setHealthRanking] = useState(null);
+  const [rankingStatus, setRankingStatus] = useState('loading');
+  const [rankingError, setRankingError] = useState('');
   const [healthOverview, setHealthOverview] = useState(null);
   const [healthMarkdown, setHealthMarkdown] = useState('');
   const [healthLoading, setHealthLoading] = useState(false);
   const [riskLabel, setRiskLabel] = useState(null);
-  const [dataEaseLink, setDataEaseLink] = useState('');
-  const [linkError, setLinkError] = useState('');
-  const [linkLoading, setLinkLoading] = useState(false);
-  const [copyTip, setCopyTip] = useState('');
-  const [repoSearch, setRepoSearch] = useState('');
+  const [repoSearch, setRepoSearch] = useState('microsoft/vscode');
   const [repoActionMsg, setRepoActionMsg] = useState('');
+  const [repoImportStatus, setRepoImportStatus] = useState(null);
   const [etlLoading, setEtlLoading] = useState(false);
   const [refreshOneLoading, setRefreshOneLoading] = useState(false);
   const [showTrendModal, setShowTrendModal] = useState(false);
@@ -200,7 +208,6 @@ function App() {
   const trendChartRef = useRef(null);
   const chatContainerRef = useRef(null);
 
-  const attachParams = useMemo(() => (selectedRepo ? buildAttachParams(selectedRepo) : ''), [selectedRepo]);
 
   const filteredRepos = useMemo(() => {
     const term = repoSearch.trim().toLowerCase();
@@ -208,6 +215,44 @@ function App() {
     if (!term) return allRepos;
     return allRepos.filter((c) => c.repo.toLowerCase().includes(term) || (c.tag || '').toLowerCase().includes(term));
   }, [repoSearch, historyRepos]);
+  const normalizedRepoSearch = repoSearch.trim();
+  const isRepoInputValid = /^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(normalizedRepoSearch);
+  const matchedCatalogRepo = useMemo(
+    () => repositoryCatalog.find((item) => item.repo.toLowerCase() === normalizedRepoSearch.toLowerCase()) || null,
+    [normalizedRepoSearch, repositoryCatalog],
+  );
+  const isImportingRepo = repoImportStatus?.tone === 'loading';
+  const isSelectedRepoInput = matchedCatalogRepo?.repo.toLowerCase() === selectedRepo.toLowerCase();
+  const repoActionLabel = matchedCatalogRepo ? '切换' : '添加并分析';
+  useEffect(() => {
+    let cancelled = false;
+    void Promise.resolve().then(async () => {
+      try {
+        const response = await fetchRepositoryCatalog();
+        if (!cancelled) setRepositoryCatalog(response?.data || []);
+      } catch {
+        if (!cancelled) setRepositoryCatalog([]);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
+
+  const loadHealthRanking = useCallback(async () => {
+    setRankingStatus('loading');
+    setRankingError('');
+    try {
+      const response = await fetchHealthRanking(selectedRepo, 10);
+      setHealthRanking(response);
+      setRankingStatus('ready');
+    } catch (error) {
+      setRankingError(error?.message || '健康排行榜加载失败');
+      setRankingStatus('error');
+    }
+  }, [selectedRepo]);
+
+  useEffect(() => {
+    void Promise.resolve().then(loadHealthRanking);
+  }, [loadHealthRanking]);
 
   const currentScore = useMemo(() => {
     const raw = healthOverview?.score_health ?? healthSnapshot.score;
@@ -322,38 +367,6 @@ function App() {
     }
   }, [selectedRepo]);
 
-  const handleGenerateLink = useCallback(async () => {
-    setLinkLoading(true);
-    setCopyTip('');
-    if (!selectedRepo) {
-      setLinkError('请选择仓库');
-      setLinkLoading(false);
-      return;
-    }
-    setLinkError('');
-
-    const baseFromEnv = (import.meta.env.VITE_DATAEASE_BASE || '').replace(/\/$/, '');
-    const screenFromEnv = import.meta.env.VITE_DATAEASE_SCREEN_ID;
-    if (baseFromEnv && screenFromEnv) {
-      setDataEaseLink(`${baseFromEnv}/#/de-link/${screenFromEnv}?attachParams=${attachParams}`);
-      setLinkLoading(false);
-      return;
-    }
-
-    try {
-      const res = await fetchDataEaseDashboardUrl(selectedRepo);
-      const url = res?.dashboard_url || res?.data?.dashboard_url;
-      if (!url) {
-        throw new Error('未返回 DataEase 链接');
-      }
-      setDataEaseLink(url);
-    } catch (err) {
-      setLinkError(err?.message || '生成链接失败');
-      setDataEaseLink('');
-    } finally {
-      setLinkLoading(false);
-    }
-  }, [attachParams, selectedRepo]);
 
   const dimensionSegments = useMemo(
     () => [
@@ -563,18 +576,65 @@ function App() {
     });
   };
 
+
+  const selectGlobalRepo = async (repo) => {
+    const next = repo?.trim();
+    if (!next || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(next)) {
+      setRepoImportStatus({ tone: 'error', text: '请输入 owner/repo 格式' });
+      return false;
+    }
+    const known = repositoryCatalog.find((item) => item.repo.toLowerCase() === next.toLowerCase());
+    const hasUsableData = known && (
+      known.sync_status === 'ready'
+      || Number(known.metric_count || 0) > 0
+      || Number(known.month_count || 0) > 0
+      || (known.sync_status === 'partial' && known.opendigger_supported === false)
+    );
+    if (hasUsableData) {
+      setSelectedRepo(known.repo);
+      setRepoSearch(known.repo);
+      setRepoImportStatus(null);
+      addToHistory(known.repo);
+      return true;
+    }
+    setRepoImportStatus({ tone: 'loading', text: '正在验证仓库并创建全量采集任务…' });
+    try {
+      let job = await importRepository(next);
+      for (let attempt = 0; attempt < 120 && ['queued', 'running'].includes(job.status); attempt += 1) {
+        setRepoImportStatus({ tone: 'loading', text: `${job.stage || '排队中'} · ${Math.round((job.progress || 0) * 100)}%` });
+        await new Promise((resolve) => window.setTimeout(resolve, 1500));
+        job = await fetchImportJob(job.job_id);
+      }
+      if (job.status !== 'succeeded') throw new Error(job.error || '仓库接入失败');
+      const response = await fetchRepositoryCatalog();
+      setRepositoryCatalog(response?.data || []);
+      const canonical = job.result?.repo || job.repo || next;
+      setSelectedRepo(canonical);
+      setRepoSearch(canonical);
+      addToHistory(canonical);
+      setRepoImportStatus({ tone: job.stage === 'degraded_ready' ? 'warn' : 'success', text: job.stage === 'degraded_ready' ? '已降级接入：无 OpenDigger 历史' : '全量月度历史已接入' });
+      return true;
+    } catch (error) {
+      setRepoImportStatus({ tone: 'error', text: error?.message || '仓库接入失败' });
+      return false;
+    }
+  };
   const handleNavClick = (key) => {
     setActiveNav(key);
+    const url = new URL(window.location.href);
+    url.searchParams.set('view', key);
+    window.history.replaceState({}, '', url);
   };
 
   const handleRefreshData = async () => {
     if (refreshing) return;
     setRefreshing(true);
     try {
-      await refreshTodayHealth();
+      await refreshMonthlyRepository(selectedRepo);
+      await loadHealthRanking();
       setMessages((prev) => [
         ...prev,
-        { id: `${Date.now()}-sys`, role: 'assistant', text: '已触发数据更新，稍后可再次查询最新健康度。' },
+        { id: `${Date.now()}-sys`, role: 'assistant', text: '已创建月度数据同步任务，可在仓库接入状态中查看进度。' },
       ]);
     } catch (err) {
       setMessages((prev) => [
@@ -598,7 +658,7 @@ function App() {
     setRepoActionMsg('');
     try {
       const res = await bootstrapHealth(repo);
-      setRepoActionMsg(`已拉取历史指标：${res?.data?.repo || repo}`);
+      setRepoActionMsg(`已创建全量历史任务：${res?.repo || repo}`);
       setSelectedRepo(repo);
     } catch (err) {
       setRepoActionMsg(err?.message || '拉取失败');
@@ -803,15 +863,6 @@ function App() {
     loadTrend(metric);
   };
 
-  const handleCopyLink = async () => {
-    if (!dataEaseLink) return;
-    try {
-      await navigator.clipboard.writeText(dataEaseLink);
-      setCopyTip('参数已复制');
-    } catch (err) {
-      setLinkError(err?.message || '复制失败');
-    }
-  };
 
   const handleCloseTrend = () => {
     setShowTrendModal(false);
@@ -827,247 +878,14 @@ function App() {
     if (activeNav === 'ai') return null;
 
     if (activeNav === 'health') {
-      const renderRiskBanner = () => {
-        if (!riskLabel) return null;
-        return <div className="risk-banner">{riskLabel}</div>;
-      };
-
       return (
-        <div className="analysis-wrapper">
-          {renderRiskBanner()}
-          <section className="analysis-card">
-            <div className="health-hero" style={{ '--theme-color': themeColor }}>
-              <div className="health-head-row">
-                <div className="health-head-info">
-                  <div className="eyebrow health-eyebrow">健康体检</div>
-                  <div className="health-head-title">数据总览</div>
-                  <p className="health-head-desc">一屏看活跃 · 响应 · 韧性 · 治理 · 安全五维体检</p>
-                </div>
-              </div>
-              <div className="health-hero-grid two-columns">
-                <div className="gauge-panel">
-                  <div className="chart-title">健康总分</div>
-                  <div className="gauge-box">
-                    <ReactECharts option={healthGaugeOption} opts={{ useResizeObserver: false }} style={{ height: 260, width: '100%' }} />
-                  </div>
-                  <div className="legend-row legend-compact">
-                    <span className="legend-dot green" /> 绿 ≥85
-                    <span className="legend-dot yellow" /> 黄 70-85
-                    <span className="legend-dot red" /> 红 &lt;70
-                  </div>
-                </div>
-
-                <div className="radar-panel">
-                  <div className="chart-title">五维雷达图</div>
-                  <div className="radar-card">
-                    {healthLoading ? (
-                      <div className="loading-text">雷达图加载中...</div>
-                    ) : (
-                      <ReactECharts option={healthRadarOption} opts={{ useResizeObserver: false }} style={{ height: 360 }} />
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="export-hero-card">
-
-              {!dataEaseLink ? (
-                <button
-                  className={`export-main-btn ${linkLoading ? 'loading' : ''}`}
-                  onClick={handleGenerateLink}
-                  disabled={linkLoading}
-                >
-                  <span className="export-icon">✨</span>
-                  {linkLoading ? '正在联通 DataEase 引擎...' : '开启 DataEase 实时大屏分析'}
-                  <span className="export-shine" />
-                  {linkLoading && <span className="export-progress" />}
-                </button>
-              ) : (
-                <div className="export-ready-row">
-                  <a className="export-enter-btn" href={dataEaseLink} target="_blank" rel="noreferrer">
-                    进入实时看板
-                  </a>
-                  <button className="export-copy-btn" onClick={handleCopyLink} title="复制参数">📋</button>
-                  {copyTip && <span className="copy-tip">{copyTip}</span>}
-                </div>
-              )}
-              {linkError && <div className="error-row compact">{linkError}</div>}
-            </div>
-
-            <div className="core-metric-panel">
-              <div className="chart-title">核心指标</div>
-              <div className="core-metric-grid">
-                {coreMetrics.map((item) => (
-                  <button
-                    key={item.key}
-                    className="core-metric-card"
-                    onClick={() => handleMetricClick(item)}
-                    disabled={healthLoading}
-                  >
-                    <div className="metric-card-top">
-                      <span className="metric-name">{item.label}</span>
-                      <span className="metric-trend-icon" aria-label="查看趋势">⤢</span>
-                    </div>
-                    <div className="metric-value-large">{item.value ?? '--'}</div>
-                    <div className="metric-sub">查看趋势</div>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </section>
-
-          <section className="analysis-card markdown-card">
-            <div className="analysis-head">
-              <div>
-                <div className="eyebrow">AI 分析报告</div>
-                <h2>多模块洞察</h2>
-              </div>
-            </div>
-            {healthLoading ? (
-              <div className="loading-text">报告加载中...</div>
-            ) : healthReport?.report_json ? (
-              <div className="multi-module-report">
-                {/* 摘要卡片 */}
-                <div className="report-summary-card">
-                  <h3>摘要</h3>
-                  <ul className="summary-bullets">
-                    {healthReport.report_json.summary_bullets.map((bullet, idx) => (
-                      <li key={idx}>{bullet}</li>
-                    ))}
-                  </ul>
-                </div>
-                
-                {/* 详细部分 */}
-                <div className="report-sections">
-                  {healthReport.report_json.sections.map((section, idx) => (
-                    <div key={idx} className="report-section-card">
-                      <h3>{section.title}</h3>
-                      <div className="section-content">
-                        {section.content_md}
-                      </div>
-                      {section.evidence && section.evidence.length > 0 && (
-                        <div className="section-evidence">
-                          <h4>证据</h4>
-                          <ul>
-                            {section.evidence.map((evidence, eIdx) => (
-                              <li key={eIdx}>
-                                {evidence.key}: {evidence.value} {evidence.dt && `(截至 ${evidence.dt})`}
-                              </li>
-                            ))}
-                          </ul>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-                
-                {/* 行动建议 */}
-                {healthReport.report_json.actions && healthReport.report_json.actions.length > 0 && (
-                  <div className="report-actions-card">
-                    <h3>行动建议</h3>
-                    {healthReport.report_json.actions.map((action, idx) => (
-                      <div key={idx} className="action-item">
-                        <div className="action-header">
-                          <span className={`priority-badge ${action.priority.toLowerCase()}`}>{action.priority}</span>
-                          <h4>{action.title}</h4>
-                        </div>
-                        <ul className="action-steps">
-                          {action.steps.map((step, sIdx) => (
-                            <li key={sIdx}>{step}</li>
-                          ))}
-                        </ul>
-                        {action.metrics_to_watch && action.metrics_to_watch.length > 0 && (
-                          <div className="metrics-to-watch">
-                            <span>监控指标：</span>
-                            {action.metrics_to_watch.join(', ')}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* 监控指标 */}
-                {healthReport.report_json.monitor && healthReport.report_json.monitor.length > 0 && (
-                  <div className="report-monitor-card">
-                    <h3>监控指标</h3>
-                    <ul className="monitor-list">
-                      {healthReport.report_json.monitor.map((metric, idx) => (
-                        <li key={idx}>{metric}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-                
-                {/* 警告和数据缺口 */}
-                {(healthReport.report_json.warnings && healthReport.report_json.warnings.length > 0) || 
-                 (healthReport.report_json.data_gaps && healthReport.report_json.data_gaps.length > 0) && (
-                  <div className="report-warnings-card">
-                    {healthReport.report_json.warnings && healthReport.report_json.warnings.length > 0 && (
-                      <>
-                        <h3>警告</h3>
-                        <ul className="warnings-list">
-                          {healthReport.report_json.warnings.map((warning, idx) => (
-                            <li key={idx}>{warning}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                    {healthReport.report_json.data_gaps && healthReport.report_json.data_gaps.length > 0 && (
-                      <>
-                        <h3>数据缺口</h3>
-                        <ul className="gaps-list">
-                          {healthReport.report_json.data_gaps.map((gap, idx) => (
-                            <li key={idx}>{gap}</li>
-                          ))}
-                        </ul>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : renderedMarkdown ? (
-              <div className="markdown-body">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{renderedMarkdown}</ReactMarkdown>
-              </div>
-            ) : (
-              <div className="mini-list">
-                {healthSnapshot.takeaways.map((text, idx) => (
-                  <div key={idx} className="list-row">• {text}</div>
-                ))}
-              </div>
-            )}
-          </section>
-
-          {showTrendModal && (
-            <div className="trend-modal-overlay" onClick={handleCloseTrend}>
-              <div className="trend-modal" onClick={(e) => e.stopPropagation()}>
-                <div className="trend-modal-head">
-                  <div>
-                    <div className="eyebrow">趋势</div>
-                    <h3>{activeMetric?.label || '指标趋势'}</h3>
-                  </div>
-                  <button className="ghost-btn" onClick={handleCloseTrend}>
-                    关闭
-                  </button>
-                </div>
-
-                {trendLoading ? (
-                  <div className="loading-text">趋势加载中...</div>
-                ) : trendError ? (
-                  <div className="error-row">{trendError}</div>
-                ) : trendSeries.length ? (
-                  <ReactECharts ref={trendChartRef} option={trendOption} opts={{ useResizeObserver: false }} style={{ height: 360 }} />
-                ) : (
-                  <div className="loading-text">暂无趋势数据</div>
-                )}
-
-                <div className="modal-footnote">支持区域缩放，工具栏可保存图片或全屏查看。</div>
-              </div>
-            </div>
-          )}
-        </div>
+        <RepositoryGovernanceDashboard
+          initialRepo={selectedRepo}
+          repositories={repositoryCatalog}
+          onSelectRepo={selectGlobalRepo}
+          onOpenAI={() => handleNavClick('ai')}
+          repositoryActionStatus={repoImportStatus}
+        />
       );
     }
 
@@ -1688,80 +1506,18 @@ function App() {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
-        <div className="brand">OpenSage</div>
-        <div className="top-nav-links">
-          {navItems.map((item) => (
-            <button
-              key={item.key}
-              className={`top-nav-btn ${activeNav === item.key ? 'active' : ''}`}
-              onClick={() => handleNavClick(item.key)}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <div className="topbar-actions">
-          <button className="ghost-btn" onClick={handleRefreshData} disabled={refreshing}>
-            {refreshing ? '更新中…' : '更新数据'}
-          </button>
-          <div className="status-dot" title="在线" />
-        </div>
-      </header>
 
-      <div className="content-grid">
-        <aside className="nav-rail repo-rail">
-          <div className="nav-rail-header">
-            <div className="nav-rail-title">仓库栏</div>
-            <div className="nav-rail-sub">搜索仓库、拉取历史数据、刷新当日数据</div>
-          </div>
+      <div className={`content-grid ${activeNav === 'health' ? 'health-workspace' : ''}`}>
+        {activeNav === 'health' && <HealthRankingRail
+          payload={healthRanking}
+          status={rankingStatus}
+          error={rankingError}
+          selectedRepo={selectedRepo}
+          onSelect={selectGlobalRepo}
+          onRetry={loadHealthRanking}
+        />}
 
-          <div className="repo-search">
-            <label>仓库</label>
-            <input
-              value={repoSearch}
-              onChange={(e) => setRepoSearch(e.target.value)}
-              placeholder="owner/repo"
-            />
-            <button className="repo-use-btn" onClick={() => {
-              const repo = repoSearch || selectedRepo;
-              setSelectedRepo(repo);
-              addToHistory(repo);
-            }}>
-              设为当前
-            </button>
-          </div>
-
-          <div className="repo-actions">
-            <button className="mini-btn" onClick={handleEtlRepo} disabled={etlLoading}>
-              {etlLoading ? '拉取中…' : 'ETL 历史'}
-            </button>
-            <button className="mini-btn" onClick={handleRefreshRepo} disabled={refreshOneLoading}>
-              {refreshOneLoading ? '刷新中…' : '刷新当日'}
-            </button>
-          </div>
-          {repoActionMsg && <div className="repo-hint">{repoActionMsg}</div>}
-
-          <div className="nav-rail-group repo-list">
-            {filteredRepos.map((c) => (
-              <button
-                key={c.id}
-                className={`nav-conv ${selectedRepo === c.repo ? 'active' : ''}`}
-                onClick={() => {
-                  // 直接更新selectedRepo，确保仓库被正确选中
-                  setSelectedRepo(c.repo);
-                  setRepoSearch(c.repo);
-                  addToHistory(c.repo);
-                }}
-              >
-                <div className="nav-conv-title">{c.repo}</div>
-                <div className="nav-conv-note">{c.tag}</div>
-              </button>
-            ))}
-          </div>
-        </aside>
-
-        <main className="chat-column">
+        <main className={`chat-column ${activeNav === 'health' ? 'health-column health-workspace-main' : ''}`}>
           {activeNav === 'ai' ? (
             <>
               {/* 聊天主区域 - 限制宽度 + 居中 */}

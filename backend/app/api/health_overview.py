@@ -1,8 +1,9 @@
 from __future__ import annotations
 
-from datetime import date
+import math
+from datetime import date, timedelta
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.db.base import get_db
@@ -26,6 +27,75 @@ risk_router = APIRouter(tags=["risk_viability"])
 
 def _serialize(model: HealthOverviewDaily) -> dict:
     return MetricEngine.serialize(model)
+
+
+HISTORY_SCORE_FIELDS = (
+    "score_health",
+    "score_vitality",
+    "score_responsiveness",
+    "score_resilience",
+    "score_governance",
+    "score_security",
+)
+
+HISTORY_METRIC_FIELDS = (
+    "metric_activity",
+    "metric_openrank",
+    "metric_contributors",
+    "metric_new_contributors",
+    "metric_issue_response_time_h",
+    "metric_pr_response_time_h",
+    "metric_issue_resolution_duration_h",
+    "metric_pr_resolution_duration_h",
+    "metric_bus_factor",
+    "metric_hhi",
+    "metric_top1_share",
+    "metric_retention_rate",
+    "metric_issues_new",
+    "metric_issues_closed",
+    "metric_prs_new",
+    "metric_change_requests_accepted",
+    "metric_scorecard_score",
+)
+
+
+def _history_bucket(dt_value: date, granularity: str) -> date:
+    if granularity == "week":
+        return dt_value - timedelta(days=dt_value.weekday())
+    if granularity == "month":
+        return dt_value.replace(day=1)
+    return dt_value
+
+
+def _average_present(records: list[HealthOverviewDaily], field: str) -> float | None:
+    values = [getattr(record, field) for record in records if getattr(record, field) is not None]
+    return sum(values) / len(values) if values else None
+
+
+def _history_record(bucket: date, records: list[HealthOverviewDaily], granularity: str) -> dict:
+    scores = {field.removeprefix("score_"): _average_present(records, field) for field in HISTORY_SCORE_FIELDS}
+    metrics = {field.removeprefix("metric_"): _average_present(records, field) for field in HISTORY_METRIC_FIELDS}
+    populated = sum(value is not None for value in [*scores.values(), *metrics.values()])
+    total = len(scores) + len(metrics)
+    updated_at = max((record.updated_at for record in records if record.updated_at), default=None)
+    return {
+        "dt": bucket.isoformat(),
+        "granularity": granularity,
+        "sample_count": len(records),
+        "scores": scores,
+        "metrics": metrics,
+        "data_completeness": populated / total if total else 0,
+        "source_updated_at": updated_at.isoformat() if updated_at else None,
+    }
+
+
+def _sync_refreshed_repo(repo_full_name: str) -> dict:
+    """Keep the per-repo presentation table aligned with refreshed raw metrics."""
+    try:
+        etl_sync_repo_table(repo_full_name, METRIC_FILES.keys())
+    except Exception as exc:  # Keep a usable health snapshot when this projection fails.
+        return {"status": "failed", "error": str(exc)}
+    return {"status": "ok"}
 
 
 @router.post("/overview")
@@ -52,6 +122,8 @@ def refresh(
 ):
     try:
         data = refresh_health_overview(db, repo_full_name, dt_value=dt)
+        if isinstance(data, dict):
+            data["per_repo_sync"] = _sync_refreshed_repo(repo_full_name)
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     except Exception as exc:  # pragma: no cover - network or third-party failures
@@ -60,43 +132,12 @@ def refresh(
 
 
 @router.post("/refresh-today")
-def refresh_today(db: Session = Depends(get_db)):
-    """Fetch today's snapshot for all repos.
-
-    Previously只刷新 health_overview_daily 里已有的仓库，导致新仓库永远刷不到今天的数据。
-    这里改成合并 health_overview_daily 和 metric_points 的去重列表，确保只要抓取过指标就会刷新。
-    """
-
-    today = date.today()
-
-    ho_repos = db.execute(select(HealthOverviewDaily.repo_full_name).distinct()).scalars().all()
-    mp_repos = db.execute(select(MetricPoint.repo).distinct()).scalars().all()
-    rc_repos = db.execute(select(RepoCatalog.repo_full_name).distinct()).scalars().all()
-    repos = sorted(set(ho_repos) | set(mp_repos) | set(rc_repos))
-
-    if not repos:
-        raise HTTPException(status_code=404, detail="no repos found in health_overview_daily or metric_points")
-
-    successes: list[dict] = []
-    failures: list[dict] = []
-
-    for repo in repos:
-        try:
-            payload = refresh_health_overview(db, repo, dt_value=today)
-            dt_value = payload.get("dt") if isinstance(payload, dict) else today.isoformat()
-            successes.append({"repo": repo, "dt": dt_value})
-        except Exception as exc:  # pragma: no cover - network or third-party failures
-            db.rollback()
-            failures.append({"repo": repo, "error": str(exc)})
-
-    return {
-        "data": {
-            "date": today.isoformat(),
-            "total_repos": len(repos),
-            "succeeded": len(successes),
-            "failed": failures,
-        }
-    }
+def refresh_today():
+    """Keep the legacy route explicit without writing another daily snapshot."""
+    raise HTTPException(
+        status_code=410,
+        detail="Daily snapshots are retired. Use POST /api/repositories/refresh for monthly OpenDigger data.",
+    )
 
 
 @router.post("/backfill")
@@ -109,7 +150,7 @@ def backfill(
 
     Note: runs synchronously; for large datasets consider running scripts/backfill_health_overview.py instead.
     """
-    from sqlalchemy import select
+    from sqlalchemy import func, select
     engine = MetricEngine()
 
     def _backfill_one(repo: str) -> int:
@@ -169,6 +210,154 @@ def latest_overview(repo_full_name: str = Query(..., description="owner/repo"), 
     if not row:
         raise HTTPException(status_code=404, detail="no snapshot found")
     return {"data": _serialize(row)}
+
+
+@router.get("/overview/ranking")
+def health_ranking(
+    limit: int = Query(10, ge=1, le=50),
+    repo: str | None = Query(None, description="owner/repo used to return the selected rank"),
+    db: Session = Depends(get_db),
+):
+    """Rank active OpenDigger repositories on one comparable health snapshot date."""
+    active_repos = select(MetricPoint.repo.label("repo")).distinct().subquery()
+    total_repositories = db.scalar(select(func.count()).select_from(active_repos)) or 0
+    minimum_coverage = math.ceil(total_repositories * 0.8)
+
+    coverage_rows = db.execute(
+        select(
+            HealthOverviewDaily.dt,
+            func.count(func.distinct(HealthOverviewDaily.repo_full_name)),
+        )
+        .where(
+            HealthOverviewDaily.score_health.is_not(None),
+            HealthOverviewDaily.repo_full_name.in_(select(active_repos.c.repo)),
+        )
+        .group_by(HealthOverviewDaily.dt)
+        .order_by(HealthOverviewDaily.dt.desc())
+    ).all()
+    comparable = next(
+        ((dt_value, count) for dt_value, count in coverage_rows if count >= minimum_coverage),
+        None,
+    )
+    if comparable is None:
+        return {
+            "status": "insufficient_coverage",
+            "comparison_date": None,
+            "coverage": {
+                "covered_repositories": 0,
+                "total_repositories": total_repositories,
+                "ratio": 0,
+                "minimum_ratio": 0.8,
+            },
+            "top": [],
+            "selected": None,
+            "source": "health_overview_daily",
+            "source_updated_at": None,
+        }
+
+    comparison_date, covered_repositories = comparable
+    rows = db.execute(
+        select(HealthOverviewDaily)
+        .where(
+            HealthOverviewDaily.dt == comparison_date,
+            HealthOverviewDaily.score_health.is_not(None),
+            HealthOverviewDaily.repo_full_name.in_(select(active_repos.c.repo)),
+        )
+        .order_by(HealthOverviewDaily.score_health.desc(), HealthOverviewDaily.repo_full_name)
+    ).scalars().all()
+
+    ranked = []
+    for index, row in enumerate(rows, start=1):
+        dimension_scores = {
+            "vitality": row.score_vitality,
+            "responsiveness": row.score_responsiveness,
+            "resilience": row.score_resilience,
+            "governance": row.score_governance,
+            "security": row.score_security,
+        }
+        available_dimensions = sum(value is not None for value in dimension_scores.values())
+        ranked.append({
+            "rank": index,
+            "repo": row.repo_full_name,
+            "score": row.score_health,
+            "status": "healthy" if row.score_health >= 80 else ("attention" if row.score_health >= 60 else "risk"),
+            "dimensions": dimension_scores,
+            "data_completeness": available_dimensions / len(dimension_scores),
+            "source_updated_at": row.updated_at.isoformat() if row.updated_at else None,
+        })
+
+    selected = next((item for item in ranked if item["repo"] == repo), None)
+    source_updated_at = max((row.updated_at for row in rows if row.updated_at), default=None)
+    return {
+        "status": "ok",
+        "comparison_date": comparison_date.isoformat(),
+        "coverage": {
+            "covered_repositories": covered_repositories,
+            "total_repositories": total_repositories,
+            "ratio": covered_repositories / total_repositories if total_repositories else 0,
+            "minimum_ratio": 0.8,
+        },
+        "top": ranked[:limit],
+        "selected": selected,
+        "source": "health_overview_daily",
+        "source_updated_at": source_updated_at.isoformat() if source_updated_at else None,
+    }
+
+
+@router.get("/overview/history")
+def overview_history(
+    repo_full_name: str = Query(..., description="owner/repo"),
+    start: date | None = Query(None, description="inclusive YYYY-MM-DD"),
+    end: date | None = Query(None, description="inclusive YYYY-MM-DD"),
+    granularity: str = Query("day", pattern="^(day|week|month)$"),
+    db: Session = Depends(get_db),
+):
+    """Return actual health snapshots for the governance dashboard.
+
+    Aggregation averages only recorded observations. Null source values remain
+    null so callers can distinguish missing data from a real zero.
+    """
+    if granularity != "month":
+        raise HTTPException(
+            status_code=410,
+            detail="Day and week health views are retired. Use GET /api/health/monthly/trend.",
+        )
+    query = db.query(HealthOverviewDaily).filter(HealthOverviewDaily.repo_full_name == repo_full_name)
+    if start:
+        query = query.filter(HealthOverviewDaily.dt >= start)
+    if end:
+        query = query.filter(HealthOverviewDaily.dt <= end)
+    rows = query.order_by(HealthOverviewDaily.dt).all()
+    if not rows:
+        raise HTTPException(status_code=404, detail="no health history found for repository and range")
+
+    buckets: dict[date, list[HealthOverviewDaily]] = {}
+    for row in rows:
+        buckets.setdefault(_history_bucket(row.dt, granularity), []).append(row)
+    records = [_history_record(bucket, buckets[bucket], granularity) for bucket in sorted(buckets)]
+
+    latest = records[-1]
+    previous = records[-2] if len(records) > 1 else None
+    source_updated_at = max((row.updated_at for row in rows if row.updated_at), default=None)
+    return {
+        "repo": repo_full_name,
+        "granularity": granularity,
+        "start": records[0]["dt"],
+        "end": records[-1]["dt"],
+        "observed_at": latest["dt"],
+        "source": "health_overview_daily",
+        "source_updated_at": source_updated_at.isoformat() if source_updated_at else None,
+        "weights": {
+            "vitality": 0.30,
+            "responsiveness": 0.25,
+            "resilience": 0.20,
+            "governance": 0.15,
+            "security": 0.10,
+        },
+        "latest": latest,
+        "previous": previous,
+        "records": records,
+    }
 
 
 @router.post("/bootstrap")

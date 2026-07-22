@@ -77,31 +77,43 @@ def _sum_slice(records: List[MetricRecord], start: int, end: int) -> float | Non
     return sum(r.value for r in subset) if subset else None
 
 
-def fetch_opendigger_metrics(db: Session, repo: str) -> Dict[str, List[MetricRecord]]:
+def fetch_opendigger_metrics(
+    db: Session,
+    repo: str,
+) -> Tuple[Dict[str, List[MetricRecord]], Dict[str, str]]:
     owner, name = repo.split("/", 1)
     client = OpenDiggerClient()
     fetched: Dict[str, List[MetricRecord]] = {}
+    failures: Dict[str, str] = {}
     for key, metric_file in _OPENDIGGER_METRICS.items():
-        recs = client.fetch_metric(owner, name, metric_file)
+        try:
+            recs = client.fetch_metric(owner, name, metric_file)
+        except (httpx.HTTPError, ValueError) as exc:
+            failures[key] = str(exc)
+            fetched[key] = []
+            continue
         _upsert_points(db, repo, key, recs)
         fetched[key] = recs
     db.commit()
-    return fetched
+    return fetched, failures
 
 
-def fetch_github_governance(repo: str) -> Tuple[Dict[str, Any], float | None]:
+def fetch_github_governance(repo: str) -> Tuple[Dict[str, Any], float | None, str | None]:
     url = f"https://api.github.com/repos/{repo}/community/profile"
     headers = {
         "Accept": "application/vnd.github+json",
     }
     if settings.GITHUB_TOKEN:
         headers["Authorization"] = f"Bearer {settings.GITHUB_TOKEN}"
-    with httpx.Client(timeout=10.0, verify=False) as client:
-        resp = client.get(url, headers=headers)
-        if resp.status_code == 404:
-            return {}, None
-        resp.raise_for_status()
-        data = resp.json()
+    try:
+        with httpx.Client(timeout=10.0, verify=False, trust_env=False) as client:
+            resp = client.get(url, headers=headers)
+            if resp.status_code == 404:
+                return {}, None, "repository_not_found"
+            resp.raise_for_status()
+            data = resp.json()
+    except (httpx.HTTPError, ValueError) as exc:
+        return {}, None, str(exc)
     files = data.get("files") or {}
     coverage = data.get("health_percentage")
     governance_files: Dict[str, Any] = {
@@ -113,21 +125,21 @@ def fetch_github_governance(repo: str) -> Tuple[Dict[str, Any], float | None]:
         "issue_template": bool(files.get("issue_template")),
         "pull_request_template": bool(files.get("pull_request_template")),
     }
-    return governance_files, coverage
+    return governance_files, coverage, None
 
 
-def fetch_scorecard(repo: str) -> Tuple[float | None, Dict[str, Any], bool]:
+def fetch_scorecard(repo: str) -> Tuple[float | None, Dict[str, Any], bool, str | None]:
     url = f"https://api.securityscorecards.dev/projects/github.com/{repo}"
     try:
-        with httpx.Client(timeout=20.0, verify=False) as client:
+        with httpx.Client(timeout=20.0, verify=False, trust_env=False) as client:
             resp = client.get(url)
             if resp.status_code == 404:
-                return None, {}, True
+                return None, {}, True, "project_not_found"
             resp.raise_for_status()
             payload = resp.json()
-    except httpx.HTTPError:
+    except (httpx.HTTPError, ValueError) as exc:
         # Scorecard 偶发超时/5xx 时降级返回默认值，避免整条链路 500
-        return None, {}, True
+        return None, {}, True, str(exc)
     score = payload.get("score")
     checks_payload = payload.get("checks") or []
     checks: Dict[str, Any] = {
@@ -135,7 +147,7 @@ def fetch_scorecard(repo: str) -> Tuple[float | None, Dict[str, Any], bool]:
         for item in checks_payload
         if isinstance(item, dict)
     }
-    return score, checks, False
+    return score, checks, False, None
 
 
 def _compute_metrics_from_records(records: Dict[str, List[MetricRecord]]) -> Dict[str, Any]:
@@ -214,12 +226,12 @@ def refresh_health_overview(db: Session, repo: str, dt_value: dt.date | None = N
         dt_value = dt.date.today()
     
     # 1. 抓取 OpenDigger 数据 (raw_payloads 的来源)
-    fetched = fetch_opendigger_metrics(db, repo)
+    fetched, opendigger_failures = fetch_opendigger_metrics(db, repo)
     metrics = _compute_metrics_from_records(fetched)
 
     # 2. 抓取 GitHub 和 Scorecard 数据
-    governance_files, coverage = fetch_github_governance(repo)
-    scorecard_score, scorecard_checks, defaulted = fetch_scorecard(repo)
+    governance_files, coverage, github_error = fetch_github_governance(repo)
+    scorecard_score, scorecard_checks, defaulted, scorecard_error = fetch_scorecard(repo)
 
     metrics.update(
         {
@@ -264,6 +276,21 @@ def refresh_health_overview(db: Session, repo: str, dt_value: dt.date | None = N
     # 这样前端就能拿到数据，而不需要数据库支持
     if isinstance(result_dict, dict):
         result_dict["raw_payloads"] = raw_payloads
+        result_dict["data_sources"] = {
+            "opendigger": {
+                "status": "ok" if not opendigger_failures else "partial",
+                "records": sum(len(records) for records in fetched.values()),
+                "failed_metrics": opendigger_failures,
+            },
+            "github": {
+                "status": "ok" if github_error is None else "unavailable",
+                "error": github_error,
+            },
+            "scorecard": {
+                "status": "ok" if scorecard_error is None else "unavailable",
+                "error": scorecard_error,
+            },
+        }
     # ===========================================
 
     return result_dict

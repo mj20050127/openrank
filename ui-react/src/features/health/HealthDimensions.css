@@ -1,0 +1,22 @@
+.health-context-column .dimension-panel .radar-panel-title { min-height: 36px; }
+.radar-title-info { display: none; }
+.radar-compact-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  min-height: 0;
+}
+.diagnosis-summary {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 2px 8px;
+  margin-top: 1px;
+  padding: 7px 9px;
+  border-left: 3px solid #bd842d;
+  color: #43524c;
+  background: rgba(250, 248, 241, .64);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.diagnosis-summary strong { grid-row: 1 / span 2; color: #a15d20; }
+.diagnosis-summary p { margin: 0; }

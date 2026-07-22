@@ -11,6 +11,7 @@ from app.api.portfolio import router as portfolio_router
 from app.api.graph import router as graph_router
 from app.api.dataease import router as dataease_router
 from app.api.health_overview import router as health_overview_router
+from app.api.visual_analysis import router as visual_analysis_router
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.api import api_router
 from app.api.agent import router as agent_router
@@ -267,6 +268,7 @@ def get_risk_viability(
 
 # 包含其他路由
 app.include_router(health_overview_router)
+app.include_router(visual_analysis_router)
 app.include_router(health_router)
 app.include_router(chat_router)
 app.include_router(metrics_router)

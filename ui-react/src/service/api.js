@@ -35,26 +35,12 @@ export async function fetchTrend(repo, metric = 'openrank') {
 }
 
 export async function bootstrapHealth(repoFullName) {
-  const url = new URL(`${API_BASE}/api/health/bootstrap`);
-  url.searchParams.set('repo_full_name', repoFullName);
-  url.searchParams.set('metrics', 'all');
-  const res = await fetch(url.toString(), { method: 'POST' });
-  return handleJsonResponse(res);
+  return importRepository(repoFullName);
 }
 
-export async function refreshTodayHealth() {
-  const res = await fetch(`${API_BASE}/api/health/refresh-today`, {
-    method: 'POST',
-  });
-  return handleJsonResponse(res);
-}
 
-export async function refreshHealth(repoFullName, dt) {
-  const url = new URL(`${API_BASE}/api/health/refresh`);
-  url.searchParams.set('repo_full_name', repoFullName);
-  if (dt) url.searchParams.set('dt', dt);
-  const res = await fetch(url.toString(), { method: 'POST' });
-  return handleJsonResponse(res);
+export async function refreshHealth(repoFullName) {
+  return refreshMonthlyRepository(repoFullName);
 }
 
 export async function fetchLatestHealthOverview(repoFullName) {
@@ -63,7 +49,118 @@ export async function fetchLatestHealthOverview(repoFullName) {
   const res = await fetch(url.toString());
   return handleJsonResponse(res);
 }
+export async function fetchHealthOverviewHistory({ repoFullName, months = '24' }) {
+  const url = new URL(`${API_BASE}/api/health/monthly/trend`);
+  url.searchParams.set('repo', repoFullName);
+  url.searchParams.set('months', months);
+  const res = await fetch(url.toString());
+  return handleJsonResponse(res);
+}
 
+export async function fetchCurrentHealth(repoFullName) {
+  const url = new URL(`${API_BASE}/api/health/current`);
+  url.searchParams.set('repo', repoFullName);
+  const res = await fetch(url.toString());
+  return handleJsonResponse(res);
+}
+
+export async function refreshCurrentHealth(repoFullName, force = true) {
+  const res = await fetch(`${API_BASE}/api/health/current/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repo: repoFullName, force }),
+  });
+  return handleJsonResponse(res);
+}
+
+export async function fetchCurrentHealthJob(jobId) {
+  const res = await fetch(`${API_BASE}/api/health/current/jobs/${jobId}`);
+  return handleJsonResponse(res);
+}
+
+export async function fetchMonthlyHistory({ repoFullName, months = '24', metrics = [] }) {
+  const url = new URL(`${API_BASE}/api/history/monthly`);
+  url.searchParams.set('repo', repoFullName);
+  url.searchParams.set('months', months);
+  metrics.forEach((metric) => url.searchParams.append('metrics', metric));
+  const res = await fetch(url.toString());
+  return handleJsonResponse(res);
+}
+
+export async function fetchHistoryCoverage(repoFullName) {
+  const url = new URL(`${API_BASE}/api/history/coverage`);
+  url.searchParams.set('repo', repoFullName);
+  const res = await fetch(url.toString());
+  return handleJsonResponse(res);
+}
+
+export async function fetchRepositoryCatalog() {
+  const res = await fetch(`${API_BASE}/api/repositories`);
+  return handleJsonResponse(res);
+}
+
+export async function searchRepositories(query, limit = 8, signal) {
+  const url = new URL(`${API_BASE}/api/repositories/search`);
+  url.searchParams.set('q', query);
+  url.searchParams.set('limit', String(limit));
+  const res = await fetch(url.toString(), { signal });
+  return handleJsonResponse(res);
+}
+
+export async function fetchHealthRanking(repo, limit = 10, scoreType = 'community') {
+  const url = new URL(`${API_BASE}/api/health/current/ranking`);
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('score_type', scoreType);
+  if (repo) url.searchParams.set('repo', repo);
+  const res = await fetch(url.toString());
+  return handleJsonResponse(res);
+}
+
+export async function importRepository(repoFullName) {
+  const res = await fetch(`${API_BASE}/api/repositories/import`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repo_full_name: repoFullName }),
+  });
+  return handleJsonResponse(res);
+}
+
+export async function fetchImportJob(jobId) {
+  const res = await fetch(`${API_BASE}/api/repositories/import/${jobId}`);
+  return handleJsonResponse(res);
+}
+
+export async function refreshMonthlyRepository(repoFullName) {
+  const res = await fetch(`${API_BASE}/api/repositories/refresh`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ repo_full_name: repoFullName }),
+  });
+  return handleJsonResponse(res);
+}
+
+export async function fetchEcosystemGraph({ rootRepo, start, end, contributorLimit = 20, signal }) {
+  const url = new URL(API_BASE + '/api/ecosystem/graph');
+  url.searchParams.set('root_repo', rootRepo);
+  if (start) url.searchParams.set('start', start);
+  if (end) url.searchParams.set('end', end);
+  url.searchParams.set('contributor_limit', String(contributorLimit));
+  const res = await fetch(url.toString(), { signal });
+  return handleJsonResponse(res);
+}
+
+export async function fetchEcosystemExpansion({ nodeType, nodeId, start, end, limit, depth, rootRepo, signal }) {
+  const url = new URL(API_BASE + '/api/ecosystem/expand');
+  url.searchParams.set('node_type', nodeType);
+  url.searchParams.set('node_id', nodeId);
+  url.searchParams.set('start', start);
+  url.searchParams.set('end', end);
+  url.searchParams.set('limit', String(limit));
+  url.searchParams.set('depth', String(depth));
+  if (rootRepo) url.searchParams.set('root_repo', rootRepo);
+  const res = await fetch(url.toString(), { signal });
+  return handleJsonResponse(res);
+}
 export async function fetchDataEaseDashboardUrl(repoFullName) {
   const url = new URL(`${API_BASE}/api/dataease/dashboard-url`);
   url.searchParams.set('repo', repoFullName);

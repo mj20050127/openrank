@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "echarts": "^6.0.0",
@@ -16,7 +17,10 @@
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1"
+    "reagraph": "^4.32.0",
+    "remark-gfm": "^4.0.1",
+    "three": "0.184.0",
+    "three-spritetext": "^1.10.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.1",
@@ -27,6 +31,7 @@
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
     "globals": "^16.5.0",
+    "typescript": "^7.0.2",
     "vite": "^7.2.4"
   }
 }

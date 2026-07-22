@@ -44,12 +44,14 @@ REGISTRY: Dict[str, MetricDef] = {
     # Developers
     "new_contributors": MetricDef("new_contributors", "new_contributors.json", "开发者", "新贡献者"),
     "contributors": MetricDef("contributors", "contributors.json", "开发者", "贡献者"),
+    "participants": MetricDef("participants", "participants.json", "开发者", "参与者"),
     "inactive_contributors": MetricDef("inactive_contributors", "inactive_contributors.json", "开发者", "不活跃的贡献者"),
     "bus_factor": MetricDef("bus_factor", "bus_factor.json", "开发者", "贡献者缺席因素"),
 
     # Issues
     "issues_new": MetricDef("issues_new", "issues_new.json", "问题", "新问题"),
     "issues_closed": MetricDef("issues_closed", "issues_closed.json", "问题", "已关闭的问题"),
+    "issue_comments": MetricDef("issue_comments", "issue_comments.json", "问题", "问题评论"),
     "issue_response_time": MetricDef("issue_response_time", "issue_response_time.json", "问题", "问题响应时间"),
     "issue_resolution_duration": MetricDef("issue_resolution_duration", "issue_resolution_duration.json", "问题", "问题解决持续时间"),
     "issue_age": MetricDef("issue_age", "issue_age.json", "问题", "问题年龄"),
@@ -72,6 +74,21 @@ REGISTRY: Dict[str, MetricDef] = {
 
 # What ETL/API actually needs: key -> json filename
 METRIC_FILES: Dict[str, str] = {k: v.file for k, v in REGISTRY.items()}
+
+# Canonical scalar monthly series used by the new ingestion pipeline. The
+# legacy alias and structured payload are intentionally excluded.
+MONTHLY_METRIC_FILES: Dict[str, str] = {
+    key: definition.file
+    for key, definition in REGISTRY.items()
+    if key not in {"code_change_lines", "active_dates_and_times"}
+}
+STRUCTURED_METRIC_FILES: Dict[str, str] = {
+    "active_dates_and_times": "active_dates_and_times.json",
+    "activity_details": "activity_details.json",
+    "contributors_detail": "contributors_detail.json",
+    "new_contributors_detail": "new_contributors_detail.json",
+    "bus_factor_detail": "bus_factor_detail.json",
+}
 
 SUPPORTED_METRICS: List[str] = sorted(METRIC_FILES.keys())
 

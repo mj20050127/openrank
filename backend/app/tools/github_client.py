@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import re
 import time
 from dataclasses import dataclass
 from threading import Lock
@@ -48,8 +49,8 @@ _cache = _Cache()
 class GitHubClient:
     """Thin GitHub API wrapper with simple in-memory TTL cache."""
 
-    ISSUE_TTL_SECONDS = 3600  # 1h
-    CONTENT_TTL_SECONDS = 86400 * 7  # 7d
+    ISSUE_TTL_SECONDS = 43200  # 12h
+    CONTENT_TTL_SECONDS = 43200  # 12h
     RATE_LIMIT_BACKOFF_SECONDS = 600  # 10m backoff when GitHub returns 403
 
     def __init__(self, token: Optional[str] = None) -> None:
@@ -68,13 +69,55 @@ class GitHubClient:
             headers["Authorization"] = f"Bearer {self.token}"
         return headers
 
-    def _get_json(self, url: str, params: Optional[Dict[str, Any]] = None) -> Any:
-        with httpx.Client(timeout=15.0, verify=False) as client:
+    def _get_response(self, url: str, params: Optional[Dict[str, Any]] = None) -> httpx.Response:
+        with httpx.Client(timeout=15.0, verify=False, trust_env=False) as client:
             resp = client.get(url, headers=self._headers(), params=params)
         if resp.status_code == 404:
-            return None
+            return resp
         resp.raise_for_status()
+        return resp
+
+    def _get_json(self, url: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        resp = self._get_response(url, params=params)
+        if resp.status_code == 404:
+            return None
         return resp.json()
+
+    def get_open_pull_request_count(self, repo: str) -> int:
+        """Count open pull requests with a one-item request and Link pagination."""
+        resp = self._get_response(
+            f"{self.base_url}/repos/{repo}/pulls",
+            params={"state": "open", "per_page": 1},
+        )
+        if resp.status_code == 404:
+            raise ValueError(f"repository not found: {repo}")
+        items = resp.json()
+        link = resp.headers.get("link", "")
+        match = re.search(r"[?&]page=(\d+)>; rel=\"last\"", link)
+        if match:
+            return int(match.group(1))
+        return len(items) if isinstance(items, list) else 0
+
+    def fetch_daily_snapshot(self, repo: str) -> Dict[str, Any]:
+        """Fetch the current public repository counters used by daily monitoring."""
+        data = self._get_json(f"{self.base_url}/repos/{repo}")
+        if not isinstance(data, dict):
+            raise ValueError(f"repository not found: {repo}")
+
+        open_prs = self.get_open_pull_request_count(repo)
+        github_open_items = int(data.get("open_issues_count") or 0)
+        return {
+            "stars": int(data.get("stargazers_count") or 0),
+            "forks": int(data.get("forks_count") or 0),
+            "open_issues": max(github_open_items - open_prs, 0),
+            "open_pull_requests": open_prs,
+            "pushed_at": data.get("pushed_at"),
+            "source_updated_at": data.get("updated_at"),
+        }
+
+    def validate_authentication(self) -> None:
+        """Fail fast before a bulk run when a configured token is invalid."""
+        self._get_json(f"{self.base_url}/rate_limit")
 
     def search_issues(self, repo: str, label: str, per_page: int = 10) -> List[Dict[str, Any]]:
         if self.is_rate_limited():
@@ -99,6 +142,53 @@ class GitHubClient:
         _cache.set("issues", cache_key, items, self.ISSUE_TTL_SECONDS)
         return items
 
+    def search_repositories(self, query: str, per_page: int = 20) -> List[Dict[str, Any]]:
+        """Search public GitHub repositories by name for repository picker suggestions."""
+        term = str(query or "").strip()
+        if not term or self.is_rate_limited():
+            return []
+
+        limit = max(1, min(int(per_page), 100))
+        cache_key = f"repository-search:{term.lower()}:{limit}"
+        cached = _cache.get("content", cache_key)
+        if cached is not None:
+            return cached
+
+        try:
+            data = self._get_json(
+                f"{self.base_url}/search/repositories",
+                params={
+                    "q": f"{term} in:name fork:false",
+                    "sort": "stars",
+                    "order": "desc",
+                    "per_page": limit,
+                },
+            ) or {}
+            items = data.get("items", []) if isinstance(data, dict) else []
+        except httpx.HTTPStatusError as exc:
+            if exc.response is not None and exc.response.status_code in {403, 429}:
+                self._mark_rate_limited()
+            items = []
+        except Exception:
+            items = []
+
+        repositories = [
+            {
+                "repo": item.get("full_name"),
+                "description": item.get("description"),
+                "language": item.get("language"),
+                "domains": [],
+                "topics": item.get("topics") or [],
+                "stars": int(item.get("stargazers_count") or 0),
+                "sync_status": "not_registered",
+                "source": "github",
+            }
+            for item in items
+            if isinstance(item, dict) and item.get("full_name")
+        ]
+        _cache.set("content", cache_key, repositories, 900)
+        return repositories
+
     def get_repo(self, repo: str) -> Optional[Dict[str, Any]]:
         try:
             data = self._get_json(f"{self.base_url}/repos/{repo}")
@@ -107,6 +197,30 @@ class GitHubClient:
         except Exception:
             pass
         return None
+
+    def list_repo_contributors(self, repo: str, per_page: int = 100) -> List[Dict[str, Any]]:
+        """Return repository contributors in one request, including canonical avatar URLs."""
+        limit = max(1, min(int(per_page), 100))
+        cache_key = f"contributors:{repo}:{limit}"
+        cached = _cache.get("content", cache_key)
+        if cached:
+            return cached
+        try:
+            data = self._get_json(
+                f"{self.base_url}/repos/{repo}/contributors",
+                params={"per_page": limit, "anon": "false"},
+            )
+            items = data if isinstance(data, list) else []
+        except httpx.HTTPStatusError as exc:
+            if exc.response is not None and exc.response.status_code in {403, 429}:
+                self._mark_rate_limited()
+            items = []
+        except Exception:
+            items = []
+        if items:
+            _cache.set("content", cache_key, items, self.CONTENT_TTL_SECONDS)
+        return items
+
 
     def list_repo_issues(self, repo: str, state: str = "open", per_page: int = 50) -> List[Dict[str, Any]]:
         params: Dict[str, Any] = {

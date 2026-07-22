@@ -1,6 +1,7 @@
 from __future__ import annotations
 import argparse
 import json
+import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Iterable, Iterator, Any, Dict
@@ -31,7 +32,10 @@ def fetch_raw_json(owner: str, repo: str, filename: str) -> Dict | None:
     url = f"https://oss.open-digger.cn/github/{owner}/{repo}/{filename}"
     try:
         req = urllib.request.Request(url, headers=HEADERS)
-        with urllib.request.urlopen(req, timeout=15) as resp:
+        # Ignore inherited HTTP(S)_PROXY values. A stopped desktop proxy must
+        # not prevent command-line ETL from reaching OpenDigger.
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(req, timeout=15) as resp:
             return json.loads(resp.read().decode())
     except urllib.error.HTTPError as e:
         if e.code == 404:
@@ -158,12 +162,13 @@ def _sanitize_identifier(name: str) -> str:
 # 修改 backend/scripts/etl.py 中的 sync_repo_table 函数
 
 def sync_repo_table(repo: str, metrics: Iterable[str]) -> None:
+    metric_list = ensure_supported(list(metrics))
     sanitized = _sanitize_identifier(repo.replace('/', '_'))
     table_name = f"repo_{sanitized}"
 
     # 1) 定义我们要同步的所有列：原始指标 + 核心维度得分
     # 原始指标列名
-    metric_cols = [f"metric_{_sanitize_identifier(m)}" for m in metrics]
+    metric_cols = [f"metric_{_sanitize_identifier(m)}" for m in metric_list]
     
     # 核心得分列名 (对应 health_overview_daily 中的字段)
     score_cols = [
@@ -186,8 +191,14 @@ def sync_repo_table(repo: str, metrics: Iterable[str]) -> None:
         # 我们通过 LEFT JOIN 把 metric_points 的聚合数据和 health_overview_daily 的得分数据合并
         cols_csv = ", ".join(all_target_cols)
         
-        # 指标部分从 metric_points 聚合 (MAX)，得分部分从 health_overview_daily 直接取
-        select_metrics = ", ".join([f"max(mp.metric_{_sanitize_identifier(m)})" for m in metrics])
+        # metric_points is the canonical long table: repo, metric, dt, value.
+        # Pivot it into the per-repo wide table with parameterized metric names.
+        select_metrics = ", ".join(
+            [
+                f"max(mp.value) FILTER (WHERE mp.metric = :metric_{index}) AS {metric_cols[index]}"
+                for index in range(len(metric_list))
+            ]
+        )
         select_scores = ", ".join([f"max(ho.{s})" for s in score_cols])
         
         update_csv = ", ".join([f"{col} = EXCLUDED.{col}" for col in all_target_cols])
@@ -198,15 +209,17 @@ def sync_repo_table(repo: str, metrics: Iterable[str]) -> None:
             mp.dt, 
             :repo_full_name,
             {select_metrics}{', ' if select_metrics and select_scores else ''}{select_scores}
-        FROM metric_points mp
-        LEFT JOIN health_overview_daily ho 
+        FROM public.metric_points mp
+        LEFT JOIN openrank.health_overview_daily ho
             ON mp.repo = ho.repo_full_name AND mp.dt = ho.dt
         WHERE mp.repo = :repo
-        GROUP BY mp.dt, ho.repo_full_name
+        GROUP BY mp.dt
         ON CONFLICT (dt) DO UPDATE SET {update_csv}, repo_full_name = EXCLUDED.repo_full_name;
         """
 
-        db.execute(text(insert_sql), {"repo": repo, "repo_full_name": repo})
+        params = {"repo": repo, "repo_full_name": repo}
+        params.update({f"metric_{index}": metric for index, metric in enumerate(metric_list)})
+        db.execute(text(insert_sql), params)
         db.commit()
         print(f"   ✅ synced per-repo table public.{table_name} (including health scores)")
 

@@ -10,6 +10,10 @@ from app.api import (
     iot_api,   # 你刚创建的 IoTDB 适配器
     newcomer,
     trends,    # 趋势分析模块
+    repositories,
+    monthly_health,
+    current_health,
+    monthly_history,
 )
 
 api_router = APIRouter()
@@ -31,3 +35,7 @@ api_router.include_router(monitor.router)
 api_router.include_router(portfolio.router)
 api_router.include_router(newcomer.router)
 api_router.include_router(trends.router)
+api_router.include_router(repositories.router)
+api_router.include_router(monthly_health.router)
+api_router.include_router(current_health.router)
+api_router.include_router(monthly_history.router)

@@ -81,8 +81,15 @@ class OpenDiggerClient:
 
     def fetch_metric(self, owner: str, repo: str, metric_file: str) -> List[MetricRecord]:
         url = self.metric_url(owner, repo, metric_file)
-        # 保持 verify=False 应对 SSL 问题
-        with httpx.Client(timeout=self.timeout, follow_redirects=True, verify=False) as c:
+        # Do not inherit a stale local proxy from the process environment.
+        # The backend must be able to refresh data even when a desktop proxy
+        # application has been stopped.
+        with httpx.Client(
+            timeout=self.timeout,
+            follow_redirects=True,
+            verify=False,
+            trust_env=False,
+        ) as c:
             r = c.get(url)
             r.raise_for_status()
             return normalize_metric_json(r.json())
