@@ -1,9 +1,35 @@
-# OpenSage｜开源生态治理可视化平台
+# OpenSage
+
+[![Python](https://img.shields.io/badge/python-%3E%3D3.10-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![License](https://img.shields.io/badge/license-MIT-22A06B)](LICENSE)
+[![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=111827)](https://react.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![ECharts](https://img.shields.io/badge/ECharts-6-AA344D)](https://echarts.apache.org/)
+[![Reagraph%20%2B%20Three.js](https://img.shields.io/badge/Reagraph%20%20%2B%20Three.js-4.32%20%2B%200.184-111827)](https://reagraph.dev/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-backend-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![OpenDigger](https://img.shields.io/badge/data-OpenDigger-7C3AED)](https://opendigger.cn/)
+[![GitHub API](https://img.shields.io/badge/data-GitHub%20API-181717?logo=github&logoColor=white)](https://docs.github.com/en/rest)
 
 > **信息可视化课程期末作品**
 > OpenSage 将开源社区的健康状态、贡献结构与新人机会，转译为可探索、可联动、可追溯的视觉分析系统。
 
-`React 19` · `ECharts 6` · `Reagraph / Three.js` · `FastAPI` · `PostgreSQL` · `OpenDigger` · `GitHub API` · `OpenSSF Scorecard`
+## 目录
+
+- [评审速览](#评审速览)
+- [1. 作品概览](#1-作品概览)
+- [2. 与课程评分要求的对应关系](#2-与课程评分要求的对应关系)
+- [3. 信息叙事：从“看见”到“行动”](#3-信息叙事从看见到行动)
+- [4. 核心可视化一：健康与生态结构](#4-核心可视化一健康与生态结构)
+- [5. 核心可视化二：社区健康的时间演化](#5-核心可视化二社区健康的时间演化)
+- [6. 核心可视化三：新人机会地图](#6-核心可视化三新人机会地图)
+- [7. 数据分析与指标口径](#7-数据分析与指标口径)
+- [8. 视觉设计语言](#8-视觉设计语言)
+- [9. 技术架构与实现完整性](#9-技术架构与实现完整性)
+- [10. 本地运行](#10-本地运行)
+- [11. 项目结构](#11-项目结构)
+- [12. 成果与演进](#12-成果与演进)
+- [13. License](#13-license)
 
 ![OpenSage 开源生态治理可视化总览：健康排名、关系图谱、五维雷达与贡献者 Pareto 分析](image/opensage-overview.png)
 
