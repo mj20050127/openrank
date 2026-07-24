@@ -38,3 +38,128 @@
 @media (max-width: 1439px) { .health-radar-svg { height: 206px; } }
 @media (max-width: 1199px) { .health-radar-svg { height: 238px; } }
 @media (max-width: 700px) { .health-radar-svg { height: 230px; } }
+
+.health-radar-point-control { cursor: pointer; outline: none; }
+.health-radar-point-control:hover .health-radar-hit-target,
+.health-radar-point-control:focus .health-radar-hit-target { fill: rgba(52, 117, 95, .12); stroke: rgba(36, 90, 72, .36); stroke-width: 1; }
+.health-radar-point-control:focus > circle:nth-last-child(2) { stroke: #14231f; stroke-width: 2; }
+.health-radar-label:focus { outline: none; fill: #a34d31; text-decoration: underline; }
+
+.health-dimension-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  padding: 16px;
+  background: rgba(20, 35, 31, .48);
+  backdrop-filter: blur(4px);
+  animation: health-dialog-fade-in .16s ease-out;
+}
+.health-dimension-dialog {
+  --dimension-accent: #34755f;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: min(760px, calc(100vw - 32px));
+  max-height: min(760px, calc(100vh - 32px));
+  overflow: hidden;
+  border: 1px solid rgba(44, 64, 57, .18);
+  border-top: 4px solid var(--dimension-accent);
+  border-radius: 18px;
+  color: #263630;
+  background: #faf8f1;
+  box-shadow: 0 24px 70px rgba(12, 28, 23, .28);
+  animation: health-dialog-rise-in .2s ease-out;
+}
+.health-dimension-dialog-header {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 22px 16px;
+  border-bottom: 1px solid rgba(44, 64, 57, .12);
+  background: rgba(255, 255, 255, .54);
+}
+.health-dimension-dialog-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--dimension-accent);
+  font: 700 10px/1.3 "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+  letter-spacing: .08em;
+}
+.health-dimension-dialog-header h2 { margin: 0; color: #14231f; font-size: 24px; line-height: 1.25; }
+.health-dimension-dialog-close {
+  display: grid;
+  flex: 0 0 36px;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0 0 3px;
+  border: 1px solid rgba(44, 64, 57, .18);
+  border-radius: 50%;
+  color: #43524c;
+  background: #fffef9;
+  font: 400 27px/1 system-ui, sans-serif;
+  cursor: pointer;
+  transition: border-color .15s ease, color .15s ease, transform .15s ease;
+}
+.health-dimension-dialog-close:hover { border-color: var(--dimension-accent); color: var(--dimension-accent); transform: rotate(6deg); }
+.health-dimension-dialog-close:focus-visible { outline: 3px solid color-mix(in srgb, var(--dimension-accent) 28%, transparent); outline-offset: 2px; }
+.health-dimension-dialog-body { overflow-y: auto; padding: 20px 22px 22px; scrollbar-gutter: stable; }
+.health-dimension-score-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 13px 15px;
+  border: 1px solid color-mix(in srgb, var(--dimension-accent) 24%, transparent);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--dimension-accent) 7%, #fffef9);
+}
+.health-dimension-score-summary > div { display: flex; align-items: baseline; gap: 10px; }
+.health-dimension-score-summary span { color: #5d6b65; font-size: 12px; }
+.health-dimension-score-summary strong { color: var(--dimension-accent); font: 800 28px/1 "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
+.health-dimension-score-summary p { margin: 0; color: #5d6b65; font-size: 12px; }
+.health-dimension-dialog-body h3 { margin: 0 0 8px; color: #21322c; font-size: 14px; }
+.health-dimension-meaning { margin-bottom: 16px; }
+.health-dimension-meaning p { margin: 0; color: #4d5c56; font-size: 13px; line-height: 1.7; }
+.health-dimension-formula {
+  margin-bottom: 18px;
+  padding: 13px 15px;
+  border-left: 3px solid var(--dimension-accent);
+  background: #f1eee4;
+}
+.health-dimension-formula span { display: block; margin-bottom: 6px; color: #7a6b55; font-size: 10px; font-weight: 700; letter-spacing: .06em; }
+.health-dimension-formula code,
+.health-dimension-components code { color: #263630; font: 600 12px/1.65 "IBM Plex Mono", "SFMono-Regular", Consolas, "Microsoft YaHei", monospace; overflow-wrap: anywhere; white-space: normal; }
+.health-dimension-components ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; padding: 0; list-style: none; }
+.health-dimension-components li { min-width: 0; padding: 12px 13px; border: 1px solid rgba(44, 64, 57, .12); border-radius: 10px; background: rgba(255, 255, 255, .58); }
+.health-dimension-component-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 6px; }
+.health-dimension-component-title strong { color: #263630; font-size: 12px; }
+.health-dimension-component-title span { padding: 2px 7px; border-radius: 999px; color: var(--dimension-accent); background: color-mix(in srgb, var(--dimension-accent) 10%, transparent); font: 700 10px/1.5 "IBM Plex Mono", monospace; }
+.health-dimension-components li p { margin: 6px 0 0; color: #718079; font-size: 11px; line-height: 1.55; }
+.health-dimension-method-note { margin: 14px 0 0; padding-top: 12px; border-top: 1px dashed rgba(44, 64, 57, .18); color: #718079; font-size: 11px; line-height: 1.6; }
+.health-dimension-method-note strong { color: #53625c; }
+
+@keyframes health-dialog-fade-in { from { opacity: 0; } }
+@keyframes health-dialog-rise-in { from { opacity: 0; transform: translateY(10px) scale(.985); } }
+
+@media (max-width: 700px) {
+  .health-dimension-dialog-overlay { align-items: end; padding: 8px; }
+  .health-dimension-dialog { width: 100%; max-height: calc(100vh - 16px); border-radius: 16px 16px 10px 10px; }
+  .health-dimension-dialog-header { padding: 17px 17px 13px; }
+  .health-dimension-dialog-header h2 { font-size: 21px; }
+  .health-dimension-dialog-body { padding: 16px 17px 18px; }
+  .health-dimension-score-summary { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .health-dimension-components ul { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .health-dimension-dialog-overlay,
+  .health-dimension-dialog { animation: none; }
+  .health-dimension-dialog-close { transition: none; }
+}

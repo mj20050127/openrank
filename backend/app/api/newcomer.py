@@ -15,9 +15,11 @@ router = APIRouter(prefix="/newcomer", tags=["newcomer"])
 def generate_plan(payload: NewcomerPlanRequest, db: Session = Depends(get_db)):
     try:
         service = NewcomerPlanService(db)
+        domains = payload.domains or ([payload.domain] if payload.domain else [])
+        stacks = payload.stacks or ([payload.stack] if payload.stack else [])
         return service.build_plan(
-            domain=payload.domain,
-            stack=payload.stack,
+            domains=domains,
+            stacks=stacks,
             time_per_week=payload.time_per_week,
             keywords=payload.keywords,
         )

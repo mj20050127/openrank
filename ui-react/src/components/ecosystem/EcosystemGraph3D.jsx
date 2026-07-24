@@ -6,8 +6,8 @@ import EcosystemGraphControls from './EcosystemGraphControlsV2';
 import { FlatReagraphNode } from './EcosystemGraphNodes';
 import EcosystemTooltip from './EcosystemTooltip';
 import { applyGraphCameraPreset } from './graphCameraConfig';
-import { buildVisualEdges, buildVisualNodes } from './graphVisualAdapter';
-import { buildCommunityZones, communityKey, createPlotRect, CUSTOM_LAYOUT_OVERRIDES, prepareForcePositions, prepareNarrativePositions, seededPosition } from './graphLayout';
+import { buildStructureEdges, buildVisualEdges, buildVisualNodes } from './graphVisualAdapter';
+import { buildCommunityZones, communityKey, createPlotRect, CUSTOM_LAYOUT_OVERRIDES, getStructureJunctionPositions, prepareForcePositions, prepareNarrativePositions, prepareStructurePositions, seededPosition } from './graphLayout';
 import { lightTechnologyTheme } from './lightTechnologyTheme';
 import EcosystemLegend from './EcosystemLegend';
 import NetworkEncodingLegend from './NetworkEncodingLegend';
@@ -117,6 +117,7 @@ function mergePayload(current, payload, parentNode) {
 export default function EcosystemGraph3D({
   rootRepo,
   records,
+  healthScore,
   focusMonth,
   onSetRoot,
   onMonthFocus,
@@ -186,6 +187,17 @@ export default function EcosystemGraph3D({
     setSnapshotMonth(requested || null);
   }, [rootRepo, healthMonths, focusMonth]);
 
+  const snapshotHealth = useMemo(() => {
+    const authoritative = healthScore === null || healthScore === undefined || healthScore === ''
+      ? Number.NaN
+      : Number(healthScore);
+    if (Number.isFinite(authoritative)) return Math.max(0, Math.min(100, authoritative));
+    if (!snapshotMonth) return null;
+    const record = [...(records || [])].reverse().find((item) => String(item.dt || '').startsWith(snapshotMonth));
+    const fallback = Number(record?.scores?.health);
+    return Number.isFinite(fallback) ? Math.max(0, Math.min(100, fallback)) : null;
+  }, [healthScore, records, snapshotMonth]);
+
 
   useEffect(() => {
     if (!rootRepo || !snapshotMonth) {
@@ -204,7 +216,7 @@ export default function EcosystemGraph3D({
       rootRepo,
       start: point,
       end: point,
-      contributorLimit: 20,
+      contributorLimit: GRAPH_LIMITS.contributors,
       signal: controller.signal,
     }).then((payload) => {
       const merged = mergePayload({ nodes: [], links: [] }, payload, null);
@@ -256,8 +268,8 @@ export default function EcosystemGraph3D({
   const adjacentIds = useMemo(() => neighborIdsFor(selected), [selected, neighborIdsFor]);
   const hoveredAdjacentIds = useMemo(() => neighborIdsFor(hovered), [hovered, neighborIdsFor]);
   const interactionFocusIds = useMemo(
-    () => hovered ? hoveredAdjacentIds : selected ? adjacentIds : new Set(),
-    [hovered, hoveredAdjacentIds, selected, adjacentIds],
+    () => selected ? adjacentIds : hovered ? hoveredAdjacentIds : new Set(),
+    [selected, adjacentIds, hovered, hoveredAdjacentIds],
   );
 
   const visibleData = useMemo(() => {
@@ -326,9 +338,19 @@ export default function EcosystemGraph3D({
     const expandedContributorId = selectedContributorId && visibleData.nodes.some((node) => node.parent_id === selectedContributorId)
       ? selectedContributorId
       : null;
-    const positionedNodes = prepareNarrativePositions(visibleData.nodes, expandedContributorId, plotSize);
+    const layoutNodes = mode === 'structure'
+      ? prepareStructurePositions(visibleData.nodes, expandedContributorId, plotSize)
+      : prepareNarrativePositions(visibleData.nodes, expandedContributorId, plotSize);
+    const positionedNodes = snapshotHealth == null
+      ? layoutNodes
+      : layoutNodes.map((node) => node.is_root ? {
+        ...node,
+        health_score: snapshotHealth,
+        health_status: undefined,
+        healthStatus: undefined,
+      } : node);
     const positionedNodeById = new Map(positionedNodes.map((node) => [node.id, node]));
-    const focusNode = hovered?.type === 'contributor' ? hovered : selected?.type === 'contributor' ? selected : null;
+    const focusNode = selected?.type === 'contributor' ? selected : hovered?.type === 'contributor' ? hovered : null;
     const focusCommunity = focusNode ? communityKey(focusNode) : null;
     const nodes = buildVisualNodes(positionedNodes, {
       minScore: contributionRange.min,
@@ -337,26 +359,44 @@ export default function EcosystemGraph3D({
       contributorIndexes,
       annotations: annotationMap,
       selectedId: selectedContributorId,
+      bundleExpandedRoutes: mode === 'structure',
       focusIds: interactionFocusIds,
       hoveredId: hovered?.id,
       selectionPulse,
       loadingNodeId,
       collapsingIds,
     });
-    const zones = buildCommunityZones(positionedNodes, expandedContributorId, focusCommunity);
-    const edgeBundle = buildVisualEdges(visibleData.links, maxLinkStrength, {
-      selectedIds: hovered ? hoveredAdjacentIds : selectedContributorId ? adjacentIds : new Set(),
-      hoveredId: hovered?.id,
-      nodeById: positionedNodeById,
-    });
+    const zones = buildCommunityZones(positionedNodes, null, focusCommunity, { compact: mode === 'structure' });
+    const edgeBundle = mode === 'structure'
+      ? buildStructureEdges(visibleData.links, maxLinkStrength, {
+        selectedContributorId,
+        hoveredId: hovered?.id,
+        nodeById: positionedNodeById,
+        junctionPositions: getStructureJunctionPositions(plotSize),
+      })
+      : buildVisualEdges(visibleData.links, maxLinkStrength, {
+        selectedIds: selectedContributorId ? adjacentIds : hovered ? hoveredAdjacentIds : new Set(),
+        hoveredId: hovered?.id,
+        nodeById: positionedNodeById,
+        muted: mode === 'community',
+      });
     return {
-      nodes: [...zones, ...nodes],
+      nodes: [...zones, ...nodes, ...(edgeBundle.routingNodes || [])],
       edges: edgeBundle.edges,
       zones,
       positionedNodes,
       realNodeIds: nodes.map((node) => node.id),
     };
-  }, [visibleData, plotSize, contributionRange.min, maxContribution, maxLinkStrength, topContributorIds, contributorIndexes, annotationMap, selected, hovered, selectionPulse, loadingNodeId, collapsingIds, adjacentIds, hoveredAdjacentIds, interactionFocusIds]);
+  }, [visibleData, mode, plotSize, snapshotHealth, contributionRange.min, maxContribution, maxLinkStrength, topContributorIds, contributorIndexes, annotationMap, selected, hovered, selectionPulse, loadingNodeId, collapsingIds, adjacentIds, hoveredAdjacentIds, interactionFocusIds]);
+  const fitNodeIds = useMemo(() => visibleData.nodes.map((node) => node.id), [visibleData.nodes]);
+
+  useEffect(() => {
+    if (status !== 'ready' || !fitNodeIds.length) return undefined;
+    const timer = window.setTimeout(() => {
+      applyGraphCameraPreset(graphRef, fitNodeIds);
+    }, 180);
+    return () => window.clearTimeout(timer);
+  }, [status, mode, snapshotMonth, filters.role, filters.minimum, filters.labelsOnly, layoutRevision, fitNodeIds]);
   useEffect(() => {
     if (status !== 'ready') {
       setCameraViewport(null);
@@ -524,6 +564,7 @@ export default function EcosystemGraph3D({
 
   const handleNodeClick = useCallback((node) => {
     const data = node.data || node;
+    if (data.layoutOnly) return;
     if (data.type === 'community-zone') {
       window.clearTimeout(hoverTimerRef.current);
       clearSelections();
@@ -668,23 +709,23 @@ export default function EcosystemGraph3D({
             labelType="none"
             edgeInterpolation="curved"
             edgeArrowPosition="none"
-            aggregateEdges
+            aggregateEdges={false}
             selections={selection.selections}
             actives={selection.actives}
-            draggable={!locked}
+            draggable={mode !== 'structure' && !locked}
             minZoom={0.55}
             maxZoom={4}
             glOptions={{ preserveDrawingBuffer: true, alpha: true, antialias: true }}
             renderNode={(props) => <FlatReagraphNode {...props} />}
             onNodeClick={handleNodeClick}
             onNodePointerOver={(node) => {
-              if (node.data.type === 'community-zone') return;
+              if (node.data.layoutOnly || node.data.type === 'community-zone') return;
               selection.onNodePointerOver(node);
               window.clearTimeout(hoverTimerRef.current);
               hoverTimerRef.current = window.setTimeout(() => onHoveredNodeIdChange?.(node.data.id), 120);
             }}
             onNodePointerOut={(node) => {
-              if (node.data.type === 'community-zone') return;
+              if (node.data.layoutOnly || node.data.type === 'community-zone') return;
               selection.onNodePointerOut(node);
               window.clearTimeout(hoverTimerRef.current);
               hoverTimerRef.current = window.setTimeout(() => onHoveredNodeIdChange?.(null), 120);

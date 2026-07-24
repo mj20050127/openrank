@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   backend:
     build: ./backend
@@ -8,8 +7,6 @@ services:
       - ./backend:/app
     environment:
       - DATABASE_URL=postgresql+psycopg2://openrank:openrank@openrank-postgres:5432/openrank
-    networks:
-      - dataease-net
     command: ["python","-m","uvicorn","app.main:app","--host","0.0.0.0","--port","8000","--reload"]
 
   openrank-postgres:
@@ -23,25 +20,6 @@ services:
       - "5432:5432"
     volumes:
       - openrank-postgres-data:/var/lib/postgresql/data
-    networks:
-      - dataease-net
-
-  dataease:
-    image: dataease/dataease:latest
-    ports:
-      - "8100:8100"
-    depends_on:
-      - openrank-postgres
-    networks:
-      - dataease-net
-    # DataEase 数据源配置请使用：
-    # host: openrank-postgres
-    # port: 5432
-    # username: openrank
-    # password: openrank
 
 volumes:
   openrank-postgres-data:
-
-networks:
-  dataease-net:

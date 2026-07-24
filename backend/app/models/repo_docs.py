@@ -12,7 +12,7 @@ class RepoDoc(Base):
     __tablename__ = "repo_docs"
 
     repo_full_name = Column(Text, primary_key=True)
-    path = Column(Text, server_default="README.md")
+    path = Column(Text, primary_key=True, server_default="README.md")
     sha = Column(Text)
     content = Column(Text)
     readme_text = Column(Text)

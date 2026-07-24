@@ -1,4 +1,5 @@
 import {
+  clamp,
   contributionStrength,
   contributorVisualSize,
   edgeVisualOpacity,
@@ -84,6 +85,7 @@ export function buildVisualNodes(nodes, {
   annotations = new Map(),
   selectedId = null,
   focusIds = new Set(),
+  bundleExpandedRoutes = false,
   hoveredId = null,
   selectionPulse = 0,
   loadingNodeId = null,
@@ -95,6 +97,15 @@ export function buildVisualNodes(nodes, {
       .sort((left, right) => Number(right.contribution_score || 0) - Number(left.contribution_score || 0) || String(left.id).localeCompare(String(right.id)))
       .map((node, index) => [node.id, index + 2]),
   );
+  const expandedRouteTargets = selectedId && bundleExpandedRoutes
+    ? nodes
+      .filter((node) => node.type === 'repository' && !node.is_root && node.parent_id === selectedId)
+      .map((node) => ({
+        id: node.id,
+        x: Number(node.x ?? node.fx ?? 0),
+        y: Number(node.y ?? node.fy ?? 0),
+      }))
+    : [];
   const seen = new Set();
   return nodes.filter((node) => {
     if (seen.has(node.id)) return false;
@@ -140,6 +151,14 @@ export function buildVisualNodes(nodes, {
         __showLabel: Boolean(node.is_root || visualType === 'repository' || isTopContributor || selectedId === node.id || hoveredId === node.id),
         __hovered: hoveredId === node.id,
         __dimmed: Boolean((selectedId || hoveredId) && !focusIds.has(node.id)),
+        __relatedHighlight: Boolean(selectedId && visualType === 'repository' && !node.is_root && node.parent_id === selectedId),
+        __expandedRouteTargets: selectedId === node.id
+          ? expandedRouteTargets.map((target) => ({
+            ...target,
+            x: target.x - Number(node.x ?? node.fx ?? 0),
+            y: target.y - Number(node.y ?? node.fy ?? 0),
+          }))
+          : [],
         __selectionPulse: selectedId === node.id ? selectionPulse : 0,
         __loading: loadingNodeId === node.id,
         __collapsing: collapsingIds.has(node.id),
@@ -160,6 +179,7 @@ function mergedLinks(links) {
     if (previous) {
       previous.weight = Number(previous.weight || 0) + Number(link.weight ?? link.strength ?? link.contribution_score ?? link.association_strength ?? 0);
       previous.count += 1;
+      previous.originalEdgeIds.push(link.id || key + ':' + previous.count);
     } else {
       merged.set(key, {
         ...link,
@@ -168,6 +188,7 @@ function mergedLinks(links) {
         relationType,
         weight: Number(link.weight ?? link.strength ?? link.contribution_score ?? link.association_strength ?? 0),
         count: 1,
+        originalEdgeIds: [link.id || key + ':1'],
       });
     }
   }
@@ -178,6 +199,7 @@ export function buildVisualEdges(links, maxWeight, {
   selectedIds = new Set(),
   hoveredId = null,
   nodeById = new Map(),
+  muted = false,
 } = {}) {
   const edges = [];
   const isInteracting = selectedIds.size > 0 || Boolean(hoveredId);
@@ -187,7 +209,8 @@ export function buildVisualEdges(links, maxWeight, {
       || link.source === hoveredId || link.target === hoveredId;
     const visualOpacity = edgeVisualOpacity(link.weight, maxWeight, active);
     const size = edgeVisualSize(link.weight, maxWeight, active);
-    const fill = edgeColor(link, nodeById, visualOpacity, active, isInteracting);
+    const baseFill = edgeColor(link, nodeById, visualOpacity, active, isInteracting);
+    const fill = muted && !active ? blendWithPaper(baseFill, 0.42) : baseFill;
     const originalId = link.source + '→' + link.target + ':' + link.relationType;
     edges.push({
       id: originalId,
@@ -201,4 +224,140 @@ export function buildVisualEdges(links, maxWeight, {
   }
 
   return { edges, routingNodes: [] };
+}
+const STRUCTURE_COMMUNITY_COLORS = Object.freeze({
+  core: VISUAL_ROLE_COLORS.core,
+  active: VISUAL_ROLE_COLORS.active,
+  lifecycle: VISUAL_ROLE_COLORS.risk,
+});
+
+export function buildStructureEdges(links, maxWeight, {
+  selectedContributorId = null,
+  hoveredId = null,
+  nodeById = new Map(),
+  junctionPositions = {},
+} = {}) {
+  const merged = mergedLinks(links);
+  const rootNode = [...nodeById.values()].find((node) => node.is_root);
+  if (!rootNode) return buildVisualEdges(links, maxWeight, { nodeById });
+
+  const grouped = new Map([['core', []], ['active', []], ['lifecycle', []]]);
+  const passthrough = [];
+  for (const link of merged) {
+    const sourceNode = nodeById.get(link.source);
+    const targetNode = nodeById.get(link.target);
+    const contributor = sourceNode?.is_root && targetNode?.type === 'contributor'
+      ? targetNode
+      : targetNode?.is_root && sourceNode?.type === 'contributor'
+        ? sourceNode
+        : null;
+    if (!contributor) {
+      passthrough.push(link);
+      continue;
+    }
+    grouped.get(communityKey(contributor)).push({ link, contributor });
+  }
+
+  const focusId = selectedContributorId || hoveredId;
+  const focusCommunity = focusId ? communityKey(nodeById.get(focusId) || {}) : null;
+  const isInteracting = Boolean(focusId);
+  const routingNodes = [];
+  const routedEdges = [];
+  const communityTotals = [...grouped.entries()].map(([community, members]) => ({
+    community,
+    total: members.reduce((sum, item) => sum + Math.max(0, Number(item.link.weight) || 0), 0),
+  }));
+  const maxCommunityTotal = Math.max(1, ...communityTotals.map((item) => item.total));
+
+  for (const { community, total } of communityTotals) {
+    const members = grouped.get(community);
+    if (!members.length) continue;
+    const position = junctionPositions[community];
+    if (!position) continue;
+    const color = STRUCTURE_COMMUNITY_COLORS[community];
+    const junctionId = '__route_junction__' + community;
+    routingNodes.push({
+      id: junctionId,
+      label: '',
+      fill: color,
+      size: 5,
+      fx: position.x,
+      fy: position.y,
+      fz: Number(position.z || 0),
+      labelVisible: false,
+      data: {
+        id: junctionId,
+        type: 'routing-junction',
+        visualType: 'routing-junction',
+        layoutOnly: true,
+        community,
+        fill: color,
+        visualSize: 5,
+        x: position.x,
+        y: position.y,
+        z: Number(position.z || 0),
+      },
+    });
+
+    const trunkBaseSize = Number(clamp(1.8 + Math.sqrt(total / maxCommunityTotal) * 1.4, 1.8, 3.2).toFixed(2));
+    const trunkFocused = !isInteracting || focusCommunity === community;
+    routedEdges.push({
+      id: 'structure-trunk:' + rootNode.id + ':' + community,
+      source: rootNode.id,
+      target: junctionId,
+      size: trunkFocused ? trunkBaseSize : Math.max(0.45, trunkBaseSize * 0.3),
+      fill: blendWithPaper(color, trunkFocused ? 0.76 : 0.08),
+      arrowPlacement: 'none',
+      data: {
+        kind: 'community-trunk',
+        community,
+        baseSize: trunkBaseSize,
+        originalEdgeIds: members.flatMap((item) => item.link.originalEdgeIds || []),
+      },
+    });
+
+    for (const { link, contributor } of members) {
+      const baseSize = edgeVisualSize(link.weight, maxWeight, false);
+      const active = !isInteracting || contributor.id === focusId;
+      const visualOpacity = edgeVisualOpacity(link.weight, maxWeight, contributor.id === focusId);
+      routedEdges.push({
+        id: 'structure-branch:' + junctionId + ':' + contributor.id,
+        source: junctionId,
+        target: contributor.id,
+        size: active ? baseSize : Math.max(0.25, baseSize * 0.28),
+        fill: blendWithPaper(color, active ? Math.max(0.32, visualOpacity) : 0.07),
+        arrowPlacement: 'none',
+        data: {
+          kind: 'community-branch',
+          community,
+          contributorId: contributor.id,
+          baseSize,
+          originalEdgeIds: link.originalEdgeIds || [],
+        },
+      });
+    }
+  }
+
+  const focusPathIds = focusId
+    ? new Set([
+      focusId,
+      ...[...nodeById.values()]
+        .filter((node) => node.type === 'repository' && !node.is_root && node.parent_id === focusId)
+        .map((node) => node.id),
+    ])
+    : new Set();
+  const expandedPathLinks = focusId
+    ? passthrough.filter((link) => focusPathIds.has(link.source) && focusPathIds.has(link.target))
+    : [];
+  const expandedPathKeys = new Set(expandedPathLinks.map((link) => link.source + '→' + link.target + ':' + link.relationType));
+  const passthroughBundle = buildVisualEdges(
+    passthrough.filter((link) => !expandedPathKeys.has(link.source + '→' + link.target + ':' + link.relationType)),
+    maxWeight,
+    {
+      selectedIds: focusPathIds,
+      hoveredId: selectedContributorId ? null : hoveredId,
+      nodeById,
+    },
+  );
+  return { edges: [...routedEdges, ...passthroughBundle.edges], routingNodes };
 }

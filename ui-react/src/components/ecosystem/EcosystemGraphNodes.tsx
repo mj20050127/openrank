@@ -64,27 +64,33 @@ function repositoryHealthColor(health, status) {
   return health >= 85 ? '#2F6F57' : '#4F876E';
 }
 
-function drawRepositoryStatusMark(context, status, x, y) {
-  const color = status === 'risk' ? '#B95643' : status === 'attention' ? '#9D742D' : status === 'healthy' ? '#4F876E' : '#98A09B';
+function repositoryHealthLabel(status, hasHealth) {
+  if (!hasHealth || status === 'unknown') return '暂无评分';
+  if (status === 'risk') return '高风险';
+  if (status === 'attention') return '需关注';
+  return '健康';
+}
+
+function drawRepositoryStatusMark(context, color, x, y) {
   context.save();
   context.fillStyle = color;
-  if (status === 'attention') {
-    context.beginPath();
-    for (let index = 0; index < 10; index += 1) {
-      const angle = -Math.PI / 2 + index * Math.PI / 5;
-      const radius = index % 2 === 0 ? 13 : 5.5;
-      const pointX = x + Math.cos(angle) * radius;
-      const pointY = y + Math.sin(angle) * radius;
-      if (index === 0) context.moveTo(pointX, pointY);
-      else context.lineTo(pointX, pointY);
-    }
-    context.closePath();
-    context.fill();
-  } else {
-    context.beginPath();
-    context.arc(x, y, status === 'risk' ? 10 : 9, 0, Math.PI * 2);
-    context.fill();
-  }
+  context.beginPath();
+  context.arc(x, y, 10, 0, Math.PI * 2);
+  context.fill();
+  context.restore();
+}
+
+function drawConnectionAnchor(context, centerX, centerY, radius, angle) {
+  const x = centerX + Math.cos(angle) * radius;
+  const y = centerY + Math.sin(angle) * radius;
+  context.save();
+  context.fillStyle = '#174A3D';
+  context.strokeStyle = '#FAF8F1';
+  context.lineWidth = 3;
+  context.beginPath();
+  context.arc(x, y, 9, 0, Math.PI * 2);
+  context.fill();
+  context.stroke();
   context.restore();
 }
 
@@ -96,14 +102,20 @@ function fitRepositoryName(context, value, maxWidth) {
   return `${text.slice(0, end)}…`;
 }
 
-function drawRepositoryFallback(context, repositoryName, centerX, centerY) {
-  context.fillStyle = '#52615A';
-  context.font = '700 64px system-ui, sans-serif';
-  context.textAlign = 'center';
-  context.textBaseline = 'middle';
-  context.fillText(initials(repositoryName, 2), centerX, centerY + 3);
+function drawRepositoryFallback(context, centerX, centerY) {
+  const gradient = context.createLinearGradient(centerX - 62, centerY - 58, centerX + 62, centerY + 58);
+  gradient.addColorStop(0, '#2E68C8');
+  gradient.addColorStop(1, '#2457A7');
+  context.fillStyle = gradient;
+  roundedRect(context, centerX - 62, centerY - 58, 43, 116, 4);
+  context.fill();
+  roundedRect(context, centerX - 8, centerY - 58, 70, 116, 4);
+  context.fill();
+  context.fillStyle = '#FAF8F1';
+  [centerY - 36, centerY - 14, centerY + 8, centerY + 30].forEach((lineY, index) => {
+    context.fillRect(centerX + (index === 0 ? 4 : 9), lineY, index === 0 ? 30 : 42, 8);
+  });
 }
-
 function makeAvatarTexture(node, fallbackColor) {
   const primaryUrl = node.avatar_url || node.avatarUrl;
   const login = String(node.login || '').trim();
@@ -169,72 +181,89 @@ function makeChipTexture(node, root) {
   const key = `${root ? 'root' : 'related'}:${repositoryName}:${node.language || ''}:${node.stars || 0}:${health}:${healthStatus}:${repositoryImageUrls.join('|')}`;
   if (chipTextureCache.has(key)) return chipTextureCache.get(key);
   const canvas = document.createElement('canvas');
-  canvas.width = root ? 384 : 640;
-  canvas.height = root ? 472 : 180;
+  const textureScale = root ? 2 : 1;
+  const width = root ? 560 : 640;
+  const height = root ? 560 : 180;
+  canvas.width = width * textureScale;
+  canvas.height = height * textureScale;
   const context = canvas.getContext('2d');
-  const width = canvas.width;
-  const height = canvas.height;
-
-  roundedRect(context, root ? 5 : 14, root ? 5 : 14, width - (root ? 10 : 28), height - (root ? 10 : 28), root ? 10 : 4);
-  context.fillStyle = '#FAF8F1';
-  context.fill();
-  context.lineWidth = root ? 5 : 2;
-  context.strokeStyle = root ? '#31443C' : '#9FA9A3';
-  context.stroke();
+  context.scale(textureScale, textureScale);
+  if (!root) {
+    roundedRect(context, 14, 14, width - 28, height - 28, 4);
+    context.fillStyle = '#FAF8F1';
+    context.fill();
+    context.lineWidth = 2;
+    context.strokeStyle = '#9FA9A3';
+    context.stroke();
+  }
 
   let avatarBox;
   if (root) {
+    const ringCenterX = width / 2;
+    const ringCenterY = height / 2;
+    const outerRadius = 258;
+    const middleRadius = 246;
+    const innerRadius = 225;
+
+    context.beginPath();
+    context.arc(ringCenterX, ringCenterY, outerRadius, 0, Math.PI * 2);
+    context.fillStyle = '#FAF8F1';
+    context.fill();
+    context.lineWidth = 1.5;
+    context.strokeStyle = '#88A9E2';
+    context.stroke();
+
+    context.beginPath();
+    context.arc(ringCenterX, ringCenterY, middleRadius, 0, Math.PI * 2);
+    context.lineWidth = 4;
+    context.strokeStyle = '#174A3D';
+    context.stroke();
+
+    context.beginPath();
+    context.arc(ringCenterX, ringCenterY, innerRadius, 0, Math.PI * 2);
+    context.lineWidth = 3.5;
+    context.strokeStyle = '#2E66B7';
+    context.stroke();
+
+    [-Math.PI * 0.76, Math.PI, 0, Math.PI * 0.24].forEach((angle) => {
+      drawConnectionAnchor(context, ringCenterX, ringCenterY, middleRadius, angle);
+    });
+
     context.textAlign = 'left';
     context.textBaseline = 'alphabetic';
-    context.fillStyle = '#50615A';
-    context.font = '600 30px "IBM Plex Mono", monospace';
-    context.fillText('001', 28, 38);
-    drawRepositoryStatusMark(context, healthStatus, width - 33, 31);
+    context.fillStyle = '#174A3D';
+    context.font = '600 30px Consolas, monospace';
+    context.fillText('R01', 176, 148);
+    drawRepositoryStatusMark(context, healthColor, 374, 140);
 
-    const ringCenterX = width / 2;
-    const ringCenterY = 172;
-    const ringRadius = 120;
-    context.lineWidth = 16;
-    context.lineCap = 'butt';
-    context.strokeStyle = '#D9D4C8';
-    context.beginPath();
-    context.arc(ringCenterX, ringCenterY, ringRadius, -Math.PI / 2, Math.PI * 1.5);
-    context.stroke();
-    if (hasHealth) {
-      context.strokeStyle = healthColor;
-      context.beginPath();
-      context.arc(ringCenterX, ringCenterY, ringRadius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * health / 100);
-      context.stroke();
-    }
-
-    context.beginPath();
-    context.arc(ringCenterX, ringCenterY, 94, 0, Math.PI * 2);
-    context.fillStyle = '#FBF9F3';
-    context.fill();
-    avatarBox = { x: 108, y: 88, width: 168, height: 168, radius: 84 };
-    drawRepositoryFallback(context, repositoryName, ringCenterX, ringCenterY);
+    avatarBox = { x: 210, y: 166, width: 140, height: 124, radius: 0 };
+    drawRepositoryFallback(context, ringCenterX, 228);
 
     context.textAlign = 'center';
     context.textBaseline = 'alphabetic';
-    context.fillStyle = '#172720';
-    context.font = '650 38px system-ui, sans-serif';
-    context.fillText(fitRepositoryName(context, repositoryName, 336), width / 2, 326);
+    context.fillStyle = '#174A3D';
+    context.font = '700 31px Consolas, monospace';
+    context.fillText(fitRepositoryName(context, repositoryName, 410), ringCenterX, 350);
 
     const scoreLabel = hasHealth ? health.toFixed(1) : '—';
-    context.font = '650 83px "IBM Plex Mono", monospace';
+    context.font = '700 76px Consolas, monospace';
     const scoreWidth = context.measureText(scoreLabel).width;
-    context.font = '500 34px "IBM Plex Mono", monospace';
+    context.font = '500 28px Consolas, monospace';
     const unitWidth = hasHealth ? context.measureText('/100').width : 0;
     const scoreStart = (width - scoreWidth - (hasHealth ? unitWidth + 12 : 0)) / 2;
     context.textAlign = 'left';
-    context.fillStyle = healthColor;
-    context.font = '650 83px "IBM Plex Mono", monospace';
-    context.fillText(scoreLabel, scoreStart, 410);
+    context.fillStyle = '#174A3D';
+    context.font = '700 76px Consolas, monospace';
+    context.fillText(scoreLabel, scoreStart, 435);
     if (hasHealth) {
-      context.fillStyle = '#65736D';
-      context.font = '500 34px "IBM Plex Mono", monospace';
-      context.fillText('/100', scoreStart + scoreWidth + 12, 407);
+      context.fillStyle = '#174A3D';
+      context.font = '500 28px Consolas, monospace';
+      context.fillText('/100', scoreStart + scoreWidth + 12, 432);
     }
+    context.textAlign = 'center';
+    context.fillStyle = healthColor;
+    context.font = '500 25px system-ui, sans-serif';
+    context.fillText(repositoryHealthLabel(healthStatus, hasHealth), ringCenterX, 486);
   } else {
     const logoGradient = context.createLinearGradient(34, 38, 142, 142);
     logoGradient.addColorStop(0, '#42679A');
@@ -247,8 +276,7 @@ function makeChipTexture(node, root) {
     context.font = '800 42px system-ui, sans-serif';
     context.textAlign = 'center';
     context.textBaseline = 'middle';
-    context.fillText(initials(repositoryName, 2), 88, 92);
-    context.textAlign = 'left';
+    context.fillText(initials(repositoryName, 2), 88, 92);    context.textAlign = 'left';
     context.textBaseline = 'alphabetic';
     context.fillStyle = '#172A25';
     context.font = '700 31px system-ui, sans-serif';
@@ -344,8 +372,8 @@ function RepositoryNodeRenderer({ node, radius, opacity }) {
   const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
     map: makeChipTexture(node, Boolean(node.is_root)), transparent: true, opacity, depthTest: false, depthWrite: false,
   }));
-  const width = node.is_root ? radius * 1.88 : radius * 12.4;
-  const aspect = node.is_root ? 384 / 472 : 3.7;
+  const width = node.is_root ? radius * 2.42 : radius * (node.parent_id ? 8.6 : 12.4);
+  const aspect = node.is_root ? 1 : 3.7;
   sprite.scale.set(width, width / aspect, 1);
   sprite.renderOrder = node.is_root ? 18 : 10;
   return sprite;
@@ -478,15 +506,87 @@ function CommunityZoneRenderer(node) {
   }
   return group;
 }
+function RoutingJunctionRenderer(node, radius, opacity) {
+  const group = new THREE.Group();
+  const dotRadius = Math.max(3.5, Math.min(6, Number(radius) || 5));
+  const halo = new THREE.Mesh(
+    new THREE.CircleGeometry(dotRadius * 1.65, 32),
+    new THREE.MeshBasicMaterial({ color: '#F5F1E7', transparent: true, opacity: 0.82 * opacity, depthTest: false, depthWrite: false }),
+  );
+  halo.position.z = 0.1;
+  halo.renderOrder = 18;
+  halo.raycast = () => {};
+  group.add(halo);
+  const dot = new THREE.Mesh(
+    new THREE.CircleGeometry(dotRadius, 32),
+    new THREE.MeshBasicMaterial({ color: node.fill || '#66756E', transparent: true, opacity: 0.96 * opacity, depthTest: false, depthWrite: false }),
+  );
+  dot.position.z = 0.2;
+  dot.renderOrder = 19;
+  dot.raycast = () => {};
+  group.add(dot);
+  return group;
+}
+function addExpandedRepositoryRoutes(group, targets, radius, opacity) {
+  if (!Array.isArray(targets) || !targets.length) return;
+  const validTargets = targets.filter((target) => Number.isFinite(Number(target.x)) && Number.isFinite(Number(target.y)));
+  if (!validTargets.length) return;
+  const average = validTargets.reduce((position, target) => ({
+    x: position.x + Number(target.x) / validTargets.length,
+    y: position.y + Number(target.y) / validTargets.length,
+  }), { x: 0, y: 0 });
+  const junction = new THREE.Vector3(average.x * 0.44, average.y * 0.44, 0.35);
+  const distance = Math.hypot(junction.x, junction.y) || 1;
+  const start = new THREE.Vector3(
+    junction.x / distance * radius * 1.22,
+    junction.y / distance * radius * 1.22,
+    0.35,
+  );
+  const addCurve = (from, to, bend = 0) => {
+    const deltaX = to.x - from.x;
+    const deltaY = to.y - from.y;
+    const length = Math.hypot(deltaX, deltaY) || 1;
+    const control = new THREE.Vector3(
+      (from.x + to.x) / 2 - deltaY / length * bend,
+      (from.y + to.y) / 2 + deltaX / length * bend,
+      0.35,
+    );
+    const curve = new THREE.QuadraticBezierCurve3(from, control, to);
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(curve.getPoints(32)),
+      new THREE.LineBasicMaterial({ color: '#315B9A', transparent: true, opacity: 0.92 * opacity, depthTest: false, depthWrite: false }),
+    );
+    line.renderOrder = 9;
+    line.raycast = () => {};
+    group.add(line);
+  };
+  addCurve(start, junction);
+  validTargets.forEach((target, index) => {
+    const end = new THREE.Vector3(Number(target.x), Number(target.y), 0.35);
+    addCurve(junction, end);
+  });
+  const junctionDot = new THREE.Mesh(
+    new THREE.CircleGeometry(3.5, 28),
+    new THREE.MeshBasicMaterial({ color: '#315B9A', transparent: true, opacity: 0.96 * opacity, depthTest: false, depthWrite: false }),
+  );
+  junctionDot.position.copy(junction);
+  junctionDot.renderOrder = 10;
+  junctionDot.raycast = () => {};
+  group.add(junctionDot);
+}
 function buildFlatNodeObject(node, radius, opacity, selected, hovered, loading, collapsing, _pulseToken) {
   if (node.visualType === 'community-zone') return CommunityZoneRenderer(node);
 
+  if (node.visualType === 'routing-junction' || node.type === 'routing-junction') return RoutingJunctionRenderer(node, radius, opacity);
   if (node.visualType === 'edge-hub' || node.type === 'edge-hub') return new THREE.Group();
   const group = new THREE.Group();
   const color = nodeColor(node);
   const materialOpacity = opacity * (collapsing ? 0.08 : 1);
   const isRoot = node.visualType === 'root-repository' || node.is_root;
   const isRepository = isRoot || node.visualType === 'repository' || node.type === 'repository' || node.type === 'root-repository';
+  if (!isRepository && node.__expandedRouteTargets?.length) {
+    addExpandedRepositoryRoutes(group, node.__expandedRouteTargets, radius, materialOpacity);
+  }
   const body = isRepository
     ? RepositoryNodeRenderer({ node, radius, opacity: materialOpacity })
     : ContributorNodeRenderer({ node, radius, opacity: materialOpacity, color });
@@ -494,17 +594,27 @@ function buildFlatNodeObject(node, radius, opacity, selected, hovered, loading, 
 
   if (selected || hovered) {
     if (isRepository) {
-      const width = isRoot ? radius * 1.88 : radius * 12.7;
-      const height = isRoot ? width / (384 / 472) : width / 3.7;
+      const width = isRoot ? radius * 2.42 : radius * (node.parent_id ? 8.9 : 12.7);
+      const height = isRoot ? width : width / 3.7;
       if (isRoot) {
         const selectionHalo = new THREE.Mesh(
-          new THREE.PlaneGeometry(width + 4, height + 4),
-          new THREE.MeshBasicMaterial({ color: selected ? '#315B9A' : '#34765F', transparent: true, opacity: selected ? 0.24 : 0.15, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
+          new THREE.RingGeometry(width / 2 + 1.4, width / 2 + 3.4, 72),
+          new THREE.MeshBasicMaterial({ color: selected ? '#315B9A' : '#34765F', transparent: true, opacity: selected ? 0.82 : 0.52, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
         );
         selectionHalo.position.z = -0.1;
         selectionHalo.renderOrder = 17;
+        selectionHalo.raycast = () => {};
         group.add(selectionHalo);
       } else {
+        const selectionHalo = new THREE.Mesh(
+          new THREE.PlaneGeometry(width + 8, height + 8),
+          new THREE.MeshBasicMaterial({ color: selected ? '#315B9A' : '#34765F', transparent: true, opacity: selected ? 0.16 : 0.09, depthTest: false, depthWrite: false, side: THREE.DoubleSide }),
+        );
+        selectionHalo.position.z = -0.15;
+        selectionHalo.renderOrder = 17;
+        selectionHalo.raycast = () => {};
+        group.add(selectionHalo);
+
         const points = [
           new THREE.Vector3(-width / 2, -height / 2, 1.2),
           new THREE.Vector3(width / 2, -height / 2, 1.2),
@@ -513,7 +623,7 @@ function buildFlatNodeObject(node, radius, opacity, selected, hovered, loading, 
         ];
         const outline = new THREE.LineLoop(
           new THREE.BufferGeometry().setFromPoints(points),
-          new THREE.LineBasicMaterial({ color: selected ? '#172A25' : '#34765F', transparent: true, opacity: selected ? 0.92 : 0.68, depthTest: false }),
+          new THREE.LineBasicMaterial({ color: selected ? '#315B9A' : '#34765F', transparent: true, opacity: selected ? 0.96 : 0.68, depthTest: false }),
         );
         outline.renderOrder = 22;
         group.add(outline);
@@ -521,7 +631,7 @@ function buildFlatNodeObject(node, radius, opacity, selected, hovered, loading, 
     } else {
       const interactionRing = new THREE.Mesh(
         new THREE.RingGeometry(radius * 1.15, radius * 1.19, 56),
-        new THREE.MeshBasicMaterial({ color: selected ? '#172A25' : '#34765F', transparent: true, opacity: selected ? 0.92 : 0.68, side: THREE.DoubleSide, depthTest: false }),
+        new THREE.MeshBasicMaterial({ color: selected ? '#315B9A' : '#34765F', transparent: true, opacity: selected ? 0.96 : 0.68, side: THREE.DoubleSide, depthTest: false }),
       );
       interactionRing.renderOrder = 22;
       group.add(interactionRing);
@@ -530,6 +640,7 @@ function buildFlatNodeObject(node, radius, opacity, selected, hovered, loading, 
   const effectRadius = isRepository ? radius * 1.2 : radius * 1.35;
   if (loading) addLoadingArc(group, effectRadius);
   if (hovered && isRoot) group.scale.setScalar(1.035);
+  if (selected && !isRoot) group.scale.setScalar(1.035);
   else if (hovered && !isRoot) group.scale.setScalar(1.06);
   if (collapsing) group.scale.setScalar(0.45);
   return group;
@@ -539,7 +650,7 @@ export function FlatReagraphNode({ node, size, opacity, selected }) {
   const renderSize = Number(data.visualSize || size);
   const effectiveOpacity = data.__dimmed ? Math.min(opacity, 0.18) : opacity;
   const object = useMemo(
-    () => buildFlatNodeObject(data, renderSize, effectiveOpacity, selected, data.__hovered, data.__loading, data.__collapsing, data.__selectionPulse),
+    () => buildFlatNodeObject(data, renderSize, effectiveOpacity, selected || data.__relatedHighlight, data.__hovered, data.__loading, data.__collapsing, data.__selectionPulse),
     [data, renderSize, effectiveOpacity, selected],
   );
   return <primitive object={object} />;

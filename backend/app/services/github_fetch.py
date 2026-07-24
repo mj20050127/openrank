@@ -4,7 +4,7 @@ import math
 from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Sequence
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
@@ -169,8 +169,8 @@ class GitHubFetchService:
 
     # ---------------- Docs -----------------
     def refresh_repo_docs(self, repo_full_name: str) -> RepoDoc:
-        existing = self.db.get(RepoDoc, repo_full_name)
-        # use timezone-aware UTC
+        path = "README.md"
+        existing = self.db.get(RepoDoc, (repo_full_name, path))
         now = datetime.now(timezone.utc).replace(tzinfo=None)
         if existing and existing.fetched_at and now - existing.fetched_at < self.content_ttl:
             return existing
@@ -180,20 +180,37 @@ class GitHubFetchService:
             repo_full_name, ".github/CONTRIBUTING.md"
         )
         pr_template_text = self.github.get_content(repo_full_name, ".github/PULL_REQUEST_TEMPLATE.md") or None
-
         extracted = self._extract_commands(readme_text, contributing_text, pr_template_text)
-        record = RepoDoc(
+
+        document_insert = insert(RepoDoc).values(
             repo_full_name=repo_full_name,
-            path="README.md",
+            path=path,
             readme_text=readme_text,
             contributing_text=contributing_text,
             pr_template_text=pr_template_text,
             extracted=extracted,
             fetched_at=now,
         )
-        self.db.merge(record)
+        self.db.execute(
+            document_insert.on_conflict_do_update(
+                index_elements=[RepoDoc.repo_full_name, RepoDoc.path],
+                set_={
+                    "readme_text": document_insert.excluded.readme_text,
+                    "contributing_text": document_insert.excluded.contributing_text,
+                    "pr_template_text": document_insert.excluded.pr_template_text,
+                    "extracted": document_insert.excluded.extracted,
+                    "fetched_at": document_insert.excluded.fetched_at,
+                    "updated_at": func.now(),
+                },
+            )
+        )
         self.db.commit()
-        return record
+        return self.db.execute(
+            select(RepoDoc).where(
+                RepoDoc.repo_full_name == repo_full_name,
+                RepoDoc.path == path,
+            )
+        ).scalar_one()
 
     def _extract_commands(
         self, readme: Optional[str], contributing: Optional[str], pr_template: Optional[str]

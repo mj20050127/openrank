@@ -2,31 +2,25 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   fetchCurrentHealth,
   fetchCurrentHealthJob,
+  fetchHealthOverviewHistory,
   fetchHistoryCoverage,
   fetchMonthlyHistory,
   refreshCurrentHealth,
 } from '../service/api';
+import { REQUIRED_HISTORY_METRICS } from '../components/community-health/metricConfig.ts';
 
-const HISTORY_METRICS = [
-  'openrank',
-  'activity',
-  'contributors',
-  'new_contributors',
-  'bus_factor',
-  'issues_new',
-  'issues_closed',
-  'change_requests',
-  'change_requests_accepted',
-  'change_requests_reviews',
-  'code_change_lines_add',
-  'code_change_lines_remove',
-];
-
-function adaptHistoryRecord(record) {
+function adaptHistoryRecord(record, scoreRecord) {
   return {
     ...record,
     dt: record.metric_month,
-    scores: {},
+    scores: scoreRecord ? {
+      vitality: scoreRecord.score_vitality ?? null,
+      responsiveness: scoreRecord.score_responsiveness ?? null,
+      resilience: scoreRecord.score_resilience ?? scoreRecord.score_community ?? null,
+      governance: scoreRecord.score_governance ?? null,
+      security: scoreRecord.score_security ?? null,
+      health: scoreRecord.score_comprehensive ?? scoreRecord.score_community ?? null,
+    } : {},
     metrics: record.metrics || {},
   };
 }
@@ -63,10 +57,11 @@ export function useGovernanceData(repo, range) {
     if (!repo) return;
     setStatus('loading');
     setError('');
-    const [historyResult, coverageResult, currentResult] = await Promise.allSettled([
-      fetchMonthlyHistory({ repoFullName: repo, months: range, metrics: HISTORY_METRICS }),
+    const [historyResult, coverageResult, currentResult, monthlyScoresResult] = await Promise.allSettled([
+      fetchMonthlyHistory({ repoFullName: repo, months: range, metrics: REQUIRED_HISTORY_METRICS }),
       fetchHistoryCoverage(repo),
       fetchCurrentHealth(repo),
+      fetchHealthOverviewHistory({ repoFullName: repo, months: range }),
     ]);
     if (historyResult.status === 'rejected') {
       setPayload(null);
@@ -78,6 +73,7 @@ export function useGovernanceData(repo, range) {
       history: historyResult.value,
       coverage: coverageResult.status === 'fulfilled' ? coverageResult.value : null,
       current: currentResult.status === 'fulfilled' ? currentResult.value : null,
+      monthlyScores: monthlyScoresResult.status === 'fulfilled' ? monthlyScoresResult.value : null,
       currentError: currentResult.status === 'rejected' ? currentResult.reason?.message : '',
     });
     setStatus('ready');
@@ -87,10 +83,13 @@ export function useGovernanceData(repo, range) {
     void Promise.resolve().then(load);
   }, [load]);
 
-  const records = useMemo(
-    () => (payload?.history?.records || []).map(adaptHistoryRecord),
-    [payload],
-  );
+  const records = useMemo(() => {
+    const scoresByMonth = new Map((payload?.monthlyScores?.records || []).map((record) => [String(record.metric_month).slice(0, 7), record]));
+    return (payload?.history?.records || []).map((record) => adaptHistoryRecord(
+      record,
+      scoresByMonth.get(String(record.metric_month).slice(0, 7)),
+    ));
+  }, [payload]);
   const current = useMemo(() => adaptCurrent(payload?.current), [payload]);
 
   const refresh = useCallback(async () => {

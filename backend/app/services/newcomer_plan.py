@@ -25,13 +25,51 @@ from app.services.newcomer_scoring import (
     percentile,
     readiness_score,
 )
+DOMAIN_ALIASES: Dict[str, tuple[str, ...]] = {
+    "frontend": ("frontend",),
+    "backend_enterprise": ("backend", "backend-enterprise"),
+    "backend": ("backend", "backend-enterprise"),
+    "mobile": ("mobile",),
+    "cloud_infra": ("cloud", "cloud-observability", "cloud-native"),
+    "ai_ml": ("ai", "ai-data", "machine-learning", "deep-learning"),
+    "deep_learning": ("deep-learning", "machine-learning", "ai", "ai-data"),
+    "time_series": ("time-series", "time-series-forecasting", "timeseries", "ai-data"),
+    "databases": ("database", "database-data-infra", "data-infra", "sql"),
+    "data_engineering": ("data-engineering", "data-platform", "data-infra"),
+    "mlops": ("mlops", "ml-ops", "machine-learning", "ai-data"),
+    "visualization": ("visualization", "data-visualization", "oss-analytics", "oss-analytics-education"),
+    "developer_tools": ("developer-tools", "developer-tool", "cli", "ide"),
+    "security": ("security",),
+    "oss_analytics": ("oss-analytics", "oss-analytics-education"),
+    "docs": ("docs", "documentation", "docs-i18n-community"),
+    "i18n": ("i18n", "internationalization", "localization", "docs-i18n-community"),
+}
 
+STACK_ALIASES: Dict[str, tuple[str, ...]] = {
+    "javascript": ("javascript", "typescript", "js", "ts"),
+    "typescript": ("typescript", "javascript", "ts", "js"),
+    "python": ("python",),
+    "go": ("go", "golang"),
+    "java": ("java",),
+    "rust": ("rust",),
+    "nodejs": ("nodejs", "node.js", "javascript", "typescript"),
+    "react": ("react", "reactjs"),
+    "vue": ("vue", "vuejs"),
+    "angular": ("angular",),
+    "php": ("php", "laravel"),
+    "csharp": ("c#", "csharp", ".net", "dotnet"),
+    "cpp": ("c", "c++", "cpp"),
+    "kotlin": ("kotlin",),
+    "swift": ("swift",),
+    "flutter": ("dart", "flutter"),
+    "sql": ("sql", "database"),
+}
 
 class NewcomerPlanService:
     """Recall → Score → Assemble recommendation + issues + timeline."""
 
-    RECALL_LIMIT = 30
-    RETURN_LIMIT = 6
+    RECALL_LIMIT = 400
+    RETURN_LIMIT = 24
 
     def __init__(self, db: Session, fetcher: Optional[GitHubFetchService] = None) -> None:
         self.db = db
@@ -40,16 +78,24 @@ class NewcomerPlanService:
     # ---------------------------------------------------------
     # Public orchestrations
     # ---------------------------------------------------------
-    def build_plan(self, domain: str, stack: str, time_per_week: str, keywords: str) -> Dict[str, Any]:
+    def build_plan(self, domains: Sequence[str], stacks: Sequence[str], time_per_week: str, keywords: str) -> Dict[str, Any]:
+        selected_domains = self._dedupe(domains)
+        selected_stacks = self._dedupe(stacks)
         keyword_list = [k.strip().lower() for k in re.split(r"[\s,]+", keywords or "") if k.strip()]
-        candidates = self._recall_candidates(domain, stack, keyword_list)
+        candidates = self._recall_candidates(selected_domains, selected_stacks, keyword_list)
         if not candidates:
-            return {"recommended_repos": [], "issues_board": {}, "timeline": [], "explain": {}, "copyable_checklist": ""}
+            return {
+                "profile": {"domains": selected_domains, "stacks": selected_stacks, "time_per_week": time_per_week, "keywords": keywords},
+                "recommended_repos": [],
+                "issues_board": {},
+                "timeline": [],
+                "explain": {},
+                "copyable_checklist": "",
+            }
 
-        # Warm caches for candidates (TTL protected)
-        for repo in candidates[: self.RECALL_LIMIT]:
-            self.fetcher.refresh_repo_issues(repo.repo_full_name)
-            self.fetcher.refresh_repo_docs(repo.repo_full_name)
+        # The map reads persisted cache only. Refreshing hundreds of repositories in
+        # a request can exhaust API limits and race with another page request.
+
 
         repo_names = [c.repo_full_name for c in candidates]
         metrics_map, resp_p, activity_p = self._load_latest_metrics(repo_names)
@@ -58,7 +104,8 @@ class NewcomerPlanService:
         supply_p = self._supply_percentiles(issue_stats_map)
 
         scored = self._score_candidates(
-            candidates, keyword_list, domain, stack, time_per_week, metrics_map, issue_stats_map, docs_map, resp_p, activity_p, supply_p
+            candidates, keyword_list, selected_domains, selected_stacks, time_per_week,
+            metrics_map, issue_stats_map, docs_map, resp_p, activity_p, supply_p
         )
 
         top_repo = scored[0] if scored else None
@@ -68,22 +115,24 @@ class NewcomerPlanService:
 
         return {
             "profile": {
-                "domain": domain,
-                "stack": stack,
+                "domains": selected_domains,
+                "stacks": selected_stacks,
                 "time_per_week": time_per_week,
                 "keywords": keywords,
             },
-            "recommended_repos": [self._serialize_repo(s) for s in scored[: self.RETURN_LIMIT]],
+            "recommended_repos": [
+                self._serialize_repo(item, index + 1)
+                for index, item in enumerate(scored[: self.RETURN_LIMIT])
+            ],
             "issues_board": issues_board,
             "timeline": timeline,
             "explain": {"why": top_repo.reasons if top_repo else []},
             "copyable_checklist": checklist,
         }
-
     def get_repo_issues(self, repo_full_name: str, readiness: float = 60.0) -> Dict[str, List[Dict[str, Any]]]:
         self.fetcher.refresh_repo_issues(repo_full_name)
         issue_stats_map = self._load_issue_stats([repo_full_name])
-        scored_repos = [ScoredRepo(repo_full_name=repo_full_name, url=None, fit_score=0, readiness_score=readiness, match_score=readiness, difficulty="", responsiveness=None, activity=None, trend_delta=0, reasons=[], stats=issue_stats_map.get(repo_full_name, IssueStats()))]
+        scored_repos = [ScoredRepo(repo_full_name=repo_full_name, url=None, fit_score=0, readiness_score=readiness, match_score=readiness, difficulty="", responsiveness=None, activity=None, trend_delta=None, reasons=[], stats=issue_stats_map.get(repo_full_name, IssueStats()))]
         return self._issues_board(repo_full_name, issue_stats_map, scored_repos)
 
     def build_task_bundle(self, repo_full_name: str, issue_identifier: str | int) -> Dict[str, Any]:
@@ -116,7 +165,7 @@ class NewcomerPlanService:
     # ---------------------------------------------------------
     # Recall & load
     # ---------------------------------------------------------
-    def _recall_candidates(self, domain: str, stack: str, keywords: List[str]) -> List[CandidateRepo]:
+    def _recall_candidates(self, domains: Sequence[str], stacks: Sequence[str], keywords: List[str]) -> List[CandidateRepo]:
         # Scan the complete curated catalog before applying the user profile.
         rows = self.db.execute(
             select(RepoCatalog)
@@ -124,64 +173,105 @@ class NewcomerPlanService:
             .where(RepositoryDataStatus.scope == "curated", RepositoryDataStatus.enabled.is_(True))
             .order_by(RepoCatalog.repo_full_name)
         ).scalars().all()
-        domain_lower = (domain or "").lower()
-        stack_lower = (stack or "").lower()
 
         def build_candidate(row) -> CandidateRepo:
-            domains = row.domains or row.topics or ([row.seed_domain] if getattr(row, "seed_domain", None) else [])
-            stacks = row.stacks or ([row.primary_language] if row.primary_language else [])
+            domain_values = list(row.domains or [])
+            if getattr(row, "seed_domain", None):
+                domain_values.append(row.seed_domain)
+            if not domain_values:
+                domain_values.extend(row.topics or [])
+            stack_values = list(row.stacks or [])
+            if row.primary_language:
+                stack_values.append(row.primary_language)
+            stack_values.extend(row.tags or [])
+            stack_values.extend(row.topics or [])
             return CandidateRepo(
                 repo_full_name=row.repo_full_name,
                 url=f"https://github.com/{row.repo_full_name}",
-                domains=domains or [],
-                stacks=stacks or [],
+                domains=self._dedupe(domain_values),
+                stacks=self._dedupe(stack_values),
                 tags=row.tags or [],
                 description=row.description or "",
                 seed_domain=row.seed_domain,
             )
 
-        def strict_match(c: CandidateRepo) -> bool:
-            if domain_lower and not self._match_list(c.domains, domain_lower):
-                return False
-            if stack_lower and not self._match_list(c.stacks, stack_lower):
-                return False
-            if keywords and not self._keyword_hit(c.tags, c.description, keywords):
-                return False
-            return True
+        def strict_match(candidate: CandidateRepo) -> bool:
+            keyword_hit = not keywords or self._keyword_hit(candidate.tags, candidate.description, keywords)
+            return self._matches_profile(candidate, domains, stacks, require_all=True) and keyword_hit
 
-        def relaxed_match(c: CandidateRepo) -> bool:
-            domain_hit = not domain_lower or self._match_list(c.domains, domain_lower)
-            stack_hit = not stack_lower or self._match_list(c.stacks, stack_lower)
-            if not (domain_hit or stack_hit):
-                return False
-            if keywords and not self._keyword_hit(c.tags, c.description, keywords):
-                return False
-            return True
+        def relaxed_match(candidate: CandidateRepo) -> bool:
+            keyword_hit = not keywords or self._keyword_hit(candidate.tags, candidate.description, keywords)
+            return self._matches_profile(candidate, domains, stacks, require_all=False) and keyword_hit
 
-        candidates_all = [build_candidate(r) for r in rows]
-        strict_results = [c for c in candidates_all if strict_match(c)]
-        if len(strict_results) >= self.RETURN_LIMIT:
-            return strict_results[: self.RECALL_LIMIT]
-
+        candidates_all = [build_candidate(row) for row in rows]
+        strict_results = [candidate for candidate in candidates_all if strict_match(candidate)]
         relaxed_results = strict_results[:]
-        for c in candidates_all:
-            if c in relaxed_results:
+        for candidate in candidates_all:
+            if candidate in relaxed_results:
                 continue
-            if relaxed_match(c):
-                relaxed_results.append(c)
+            if relaxed_match(candidate):
+                relaxed_results.append(candidate)
             if len(relaxed_results) >= self.RECALL_LIMIT:
                 break
+        return relaxed_results[: self.RECALL_LIMIT]
 
-        if len(relaxed_results) >= self.RETURN_LIMIT:
-            return relaxed_results[: self.RECALL_LIMIT]
+    @staticmethod
+    def _dedupe(values: Sequence[str]) -> List[str]:
+        result: List[str] = []
+        seen = set()
+        for value in values or []:
+            cleaned = str(value).strip()
+            key = cleaned.lower()
+            if cleaned and key not in seen:
+                seen.add(key)
+                result.append(cleaned)
+        return result
 
-        # Fallback: fill up with remaining repos even无匹配，以保证有足够候选
-        filler = [c for c in candidates_all if c not in relaxed_results]
-        return (relaxed_results + filler)[: self.RECALL_LIMIT]
+    @staticmethod
+    def _normal_key(value: str) -> str:
+        return re.sub(r"[^a-z0-9+#.]+", "", str(value or "").lower())
 
     def _match_list(self, values: Sequence[str], target: str) -> bool:
-        t = target.lower()
-        return any(t == v.lower() or t in v.lower() or v.lower() in t for v in values or [])
+        target_key = self._normal_key(target)
+        return bool(target_key) and any(self._normal_key(value) == target_key for value in values or [])
+
+    def _matches_selection(
+        self,
+        candidate_values: Sequence[str],
+        selections: Sequence[str],
+        aliases: Dict[str, tuple[str, ...]],
+    ) -> bool:
+        return any(
+            any(self._match_list(candidate_values, alias) for alias in aliases.get(selection.lower(), (selection,)))
+            for selection in selections or []
+        )
+
+    def _matches_profile(
+        self,
+        candidate: CandidateRepo,
+        domains: Sequence[str],
+        stacks: Sequence[str],
+        require_all: bool,
+    ) -> bool:
+        active_matches = []
+        if domains:
+            active_matches.append(self._matches_selection(candidate.domains, domains, DOMAIN_ALIASES))
+        if stacks:
+            active_matches.append(self._matches_selection(candidate.stacks, stacks, STACK_ALIASES))
+        if not active_matches:
+            return True
+        return all(active_matches) if require_all else any(active_matches)
+
+    def _matched_selections(
+        self,
+        candidate_values: Sequence[str],
+        selections: Sequence[str],
+        aliases: Dict[str, tuple[str, ...]],
+    ) -> List[str]:
+        return [
+            selection for selection in selections
+            if any(self._match_list(candidate_values, alias) for alias in aliases.get(selection.lower(), (selection,)))
+        ]
 
     def _keyword_hit(self, tags: Sequence[str], description: str, keywords: List[str]) -> bool:
         text = " ".join([" ".join(tags or []), description or ""]).lower()
@@ -300,8 +390,8 @@ class NewcomerPlanService:
         self,
         candidates: List[CandidateRepo],
         keywords: List[str],
-        domain: str,
-        stack: str,
+        domains: Sequence[str],
+        stacks: Sequence[str],
         time_per_week: str,
         metrics_map: Dict[str, RepoMetrics],
         issue_stats_map: Dict[str, IssueStats],
@@ -327,11 +417,22 @@ class NewcomerPlanService:
             stats = issue_stats_map.get(repo.repo_full_name, IssueStats())
             doc = docs_map.get(repo.repo_full_name, DocInfo(repo.repo_full_name, None, None, None, {}))
 
-            fit = fit_score(repo, domain, stack, keywords)
+            domain_aliases = [alias for item in domains for alias in DOMAIN_ALIASES.get(item.lower(), (item,))]
+            stack_aliases = [alias for item in stacks for alias in STACK_ALIASES.get(item.lower(), (item,))]
+            matched_domains = self._matched_selections(repo.domains, domains, DOMAIN_ALIASES)
+            matched_stacks = self._matched_selections(repo.stacks, stacks, STACK_ALIASES)
+            fit = fit_score(repo, domain_aliases, stack_aliases, keywords)
             readiness = readiness_score(metrics, stats, doc, resp_p, activity_p, supply_p)
-            match = 0.55 * fit + 0.45 * readiness
+            has_profile = bool(domains or stacks or keywords)
+            match = 0.55 * fit + 0.45 * readiness if has_profile else readiness
             difficulty = difficulty_label(readiness, time_per_week)
-            reasons = build_reasons(repo, metrics, stats, readiness, fit)
+            reasons = []
+            if matched_domains:
+                reasons.append(f"方向匹配：{'、'.join(matched_domains)}")
+            if matched_stacks:
+                reasons.append(f"技能匹配：{'、'.join(matched_stacks)}")
+            reasons.extend(build_reasons(repo, metrics, stats, readiness, fit)[1:])
+            reasons = reasons[:5]
             scored.append(
                 ScoredRepo(
                     repo_full_name=repo.repo_full_name,
@@ -342,9 +443,14 @@ class NewcomerPlanService:
                     difficulty=difficulty,
                     responsiveness=metrics.metric_issue_response_time_h,
                     activity=metrics.metric_activity_3m,
-                    trend_delta=metrics.metric_activity_growth or 0.0,
+                    trend_delta=metrics.metric_activity_growth,
                     reasons=reasons,
                     stats=stats,
+                    description=repo.description or "",
+                    domains=repo.domains,
+                    stacks=repo.stacks,
+                    matched_domains=matched_domains,
+                    matched_stacks=matched_stacks,
                 )
             )
 
@@ -482,9 +588,11 @@ class NewcomerPlanService:
             lines.append(f"PR 模板：\n- 关联 issue #{issue.issue_number}\n- 描述变更、测试结果、影响范围")
         return "\n".join(lines).strip()
 
-    def _serialize_repo(self, scored: ScoredRepo) -> Dict[str, Any]:
+    def _serialize_repo(self, scored: ScoredRepo, rank: Optional[int] = None) -> Dict[str, Any]:
         payload = asdict(scored)
         payload["stats"] = asdict(scored.stats) if scored.stats else {}
+        if rank is not None:
+            payload["rank"] = rank
         return payload
 
     def _ago(self, updated_at: Optional[datetime]) -> str:

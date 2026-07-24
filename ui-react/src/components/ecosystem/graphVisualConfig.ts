@@ -25,6 +25,7 @@ export const ROLE_LABELS = Object.freeze({
 
 export const GRAPH_LIMITS = Object.freeze({
   nodes: 40,
+  contributors: 30,
   links: 60,
   depth: 1,
   contributorRepos: 3,

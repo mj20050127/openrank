@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Dict, Iterable, List, Optional, Sequence
 
@@ -62,9 +62,14 @@ class ScoredRepo:
     difficulty: str
     responsiveness: Optional[float]
     activity: Optional[float]
-    trend_delta: float
+    trend_delta: Optional[float]
     reasons: List[str]
     stats: IssueStats
+    description: str = ""
+    domains: List[str] = field(default_factory=list)
+    stacks: List[str] = field(default_factory=list)
+    matched_domains: List[str] = field(default_factory=list)
+    matched_stacks: List[str] = field(default_factory=list)
 
 
 def percentile(values: Sequence[float], pct: float) -> Optional[float]:
@@ -111,18 +116,28 @@ def compute_keyword_overlap(user_keywords: Sequence[str], tags: Sequence[str], d
     return clamp(overlap / max(len(user), 1))
 
 
-def fit_score(repo: CandidateRepo, domain: str, stack: str, keywords: List[str]) -> float:
-    domain_hit = 1.0 if _contains(repo.domains, domain) else 0.0
-    stack_hit = 1.0 if _contains(repo.stacks, stack) else 0.0
-    keyword_overlap = compute_keyword_overlap(keywords, repo.tags, repo.description)
-    score = 40 * domain_hit + 35 * stack_hit + 25 * keyword_overlap
+def fit_score(repo: CandidateRepo, domains: Sequence[str] | str, stacks: Sequence[str] | str, keywords: List[str]) -> float:
+    selected_domains = [domains] if isinstance(domains, str) else list(domains or [])
+    selected_stacks = [stacks] if isinstance(stacks, str) else list(stacks or [])
+    components: List[tuple[float, float]] = []
+    if selected_domains:
+        components.append((1.0 if any(_contains(repo.domains, item) for item in selected_domains) else 0.0, 40.0))
+    if selected_stacks:
+        components.append((1.0 if any(_contains(repo.stacks, item) for item in selected_stacks) else 0.0, 35.0))
+    if keywords:
+        components.append((compute_keyword_overlap(keywords, repo.tags, repo.description), 25.0))
+    if not components:
+        return 0.0
+    total_weight = sum(weight for _, weight in components)
+    score = sum(value * weight for value, weight in components) / total_weight * 100.0
     return float(min(score, 100.0))
 
-
 def _contains(values: Sequence[str], target: str) -> bool:
-    t = (target or "").lower()
-    return any(t == v.lower() or t in v.lower() or v.lower() in t for v in values or [])
+    def normalize(value: str) -> str:
+        return re.sub(r"[^a-z0-9+#.]+", "", str(value or "").lower())
 
+    target_key = normalize(target)
+    return bool(target_key) and any(normalize(value) == target_key for value in values or [])
 
 def readiness_score(
     metrics: RepoMetrics,

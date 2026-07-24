@@ -7,21 +7,13 @@ pydantic>=2.6,<3.0
 pydantic-settings>=2.2,<3.0
 python-dotenv>=1.0,<2.0
 
-# HTTP (OpenDigger / DataEase / MaxKB API)
+# HTTP (OpenDigger / GitHub API)
 httpx>=0.27,<1.0
-PyJWT>=2.8,<3.0
 
 # DB
 SQLAlchemy>=2.0,<3.0
 alembic>=1.13,<2.0
 psycopg[binary]>=3.1,<4.0
-
-# Scheduler (监控/预警)
-APScheduler>=3.10,<4.0
-
-# LLM (轻量 Agent：自己写 Router/Orchestrator，不用 LangChain)
-openai>=1.30,<2.0
-tenacity>=8.2,<9.0
 
 # Graph analytics（生态治理/协作结构加分项，纯 Python 很稳）
 networkx>=3.3,<4.0

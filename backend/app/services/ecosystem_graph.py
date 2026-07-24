@@ -21,6 +21,7 @@ from app.services.monthly_scoring import SCORE_VERSION
 from app.tools.github_client import GitHubClient
 
 CONTRIBUTION_WEIGHTS = {"commits": 1, "pull_requests": 3, "reviews": 2, "issues": 1}
+MAX_CONTRIBUTORS = 30
 MAX_NODES = 40
 MAX_LINKS = 60
 CACHE_SECONDS = 43200
@@ -352,7 +353,7 @@ def _repo_details(db: Session, repos: list[str], end: date | None) -> dict[str, 
     return details
 
 
-def build_root_graph(db: Session, root_repo: str, start: date | None = None, end: date | None = None, contributor_limit: int = 20) -> dict[str, Any]:
+def build_root_graph(db: Session, root_repo: str, start: date | None = None, end: date | None = None, contributor_limit: int = MAX_CONTRIBUTORS) -> dict[str, Any]:
     activity_payload = _opendigger_json(root_repo, "activity_details.json")
     contributor_payload = _opendigger_json(root_repo, "contributors_detail.json")
     newcomer_payload = _opendigger_json(root_repo, "new_contributors_detail.json")
@@ -451,7 +452,7 @@ def build_root_graph(db: Session, root_repo: str, start: date | None = None, end
             if month >= _month_key(_shift_month(effective_end, -3)):
                 row["activity_proxy"] += value
 
-    limit = max(1, min(contributor_limit, 20))
+    limit = max(1, min(contributor_limit, MAX_CONTRIBUTORS))
     active_ranked = sorted(
         activity_by_user,
         key=lambda login: (-activity_by_user[login]["activity_proxy"], login.lower()),

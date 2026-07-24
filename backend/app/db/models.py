@@ -305,46 +305,4 @@ class RepoSnapshot(Base):
     snapshot_json = Column(JSONType, nullable=False)
     created_at = Column(TIMESTAMP, server_default=func.now())
 
-class Report(Base):
-    __tablename__ = "reports"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    repo = Column(Text, nullable=False, index=True)
-    mode = Column(Text, nullable=False)
-    query = Column(Text, nullable=False)
-    payload_json = Column(JSONType, nullable=False)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
-class WatchList(Base):
-    __tablename__ = "watchlist"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    repo = Column(Text, nullable=False, unique=True, index=True)
-    rules_json = Column(JSONType, nullable=False)
-    enabled = Column(Boolean, default=True)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())
-
-class Alert(Base):
-    __tablename__ = "alerts"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    repo = Column(Text, nullable=False, index=True)
-    metric = Column(Text, nullable=False, index=True)
-    level = Column(Text, nullable=False)
-    reason = Column(Text, nullable=False)
-    evidence_json = Column(JSONType)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-
 from app.models import RepoCatalog, RepoDoc, RepoIssue
-
-
-class DataEaseBinding(Base):
-    __tablename__ = "dataease_bindings"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    repo = Column(Text, nullable=False, unique=True, index=True)
-    data_source_id = Column(Text, nullable=False)
-    dataset_ids = Column(JSONType, nullable=False)
-    screen_id = Column(Text, nullable=False)
-    embed_url = Column(Text, nullable=False)
-    raw_json = Column(JSONType)
-    created_at = Column(TIMESTAMP, server_default=func.now())
-    updated_at = Column(TIMESTAMP, server_default=func.now(), onupdate=func.now())

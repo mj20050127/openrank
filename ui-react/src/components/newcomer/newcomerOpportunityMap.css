@@ -1,0 +1,287 @@
+.newcomer-opportunity-map {
+  --atlas-bg: #f4f0e5;
+  --atlas-panel: #f8f5ec;
+  --atlas-ink: #173b32;
+  --atlas-text: #202823;
+  --atlas-muted: #74776f;
+  --atlas-rule: rgba(23, 59, 50, .30);
+  --atlas-grid: rgba(23, 59, 50, .10);
+  --atlas-teal: #2f9385;
+  --atlas-blue: #476fbd;
+  --atlas-ochre: #d69a32;
+  --atlas-rust: #d56f50;
+  width: 100%;
+  min-height: 0;
+  margin-top: 14px;
+  overflow: hidden;
+  color: var(--atlas-text);
+  border: 1px solid var(--atlas-ink);
+  border-radius: 3px;
+  background: var(--atlas-bg);
+  font-variant-numeric: tabular-nums;
+  outline: none;
+}
+
+.newcomer-opportunity-map:focus-visible { outline: 2px solid var(--atlas-ink); outline-offset: -3px; }
+
+.newcomer-map-header {
+  display: grid;
+  grid-template-columns: minmax(250px, .8fr) minmax(470px, 1.4fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 58px;
+  padding: 10px 14px 9px;
+  border-bottom: 1px solid var(--atlas-rule);
+}
+
+.newcomer-map-title { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.newcomer-map-title h2 { margin: 0; color: var(--atlas-ink); font: 650 21px/1.2 Georgia, "Times New Roman", "Noto Serif SC", serif; letter-spacing: .02em; white-space: nowrap; }
+.newcomer-map-title span { display: block; margin-top: 0; color: var(--atlas-muted); font: 10px/1.2 "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace; letter-spacing: .1em; white-space: nowrap; }
+
+.newcomer-map-controls { display: flex; align-items: center; justify-content: center; flex-wrap: nowrap; gap: 8px; min-width: 0; }
+.newcomer-filter-field { display: grid; gap: 4px; min-width: 110px; }
+.newcomer-filter-field:first-child { min-width: 130px; }
+.newcomer-filter-field:nth-child(2) { min-width: 190px; }
+.newcomer-filter-label { color: var(--atlas-muted); font: 10px/1.1 "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-filter-field select,
+.newcomer-filter-multi summary {
+  box-sizing: border-box;
+  width: 100%;
+  height: 34px;
+  padding: 0 9px;
+  color: var(--atlas-ink);
+  border: 1px solid var(--atlas-rule);
+  border-radius: 2px;
+  background: transparent;
+  font: 13px "Noto Sans SC", "PingFang SC", sans-serif;
+  cursor: pointer;
+}
+.newcomer-filter-field select { outline: none; }
+.newcomer-filter-field select:hover,
+.newcomer-filter-multi summary:hover { background: rgba(23,59,50,.045); }
+.newcomer-filter-multi-field { position: relative; }
+.newcomer-filter-multi { position: relative; display: block; min-width: 100%; }
+.newcomer-filter-multi summary { position: relative; display: flex; align-items: center; justify-content: space-between; list-style: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.newcomer-filter-multi summary::-webkit-details-marker { display: none; }
+.newcomer-filter-multi summary::after {
+  position: absolute;
+  top: 50%;
+  right: 9px;
+  width: 8px;
+  height: 5px;
+  content: '';
+  background: currentColor;
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+.newcomer-filter-menu { position: absolute; z-index: 30; top: calc(100% + 4px); left: 0; min-width: 190px; max-height: 300px; overflow: auto; padding: 7px; border: 1px solid var(--atlas-rule); border-radius: 2px; background: var(--atlas-panel); box-shadow: 0 5px 16px rgba(23,59,50,.12); }
+.newcomer-filter-menu label { display: flex; align-items: center; gap: 7px; padding: 6px 4px; color: var(--atlas-text); font: 12px "Noto Sans SC", "PingFang SC", sans-serif; cursor: pointer; }
+.newcomer-filter-menu label:hover { background: rgba(23,59,50,.06); }
+.newcomer-filter-menu input { accent-color: var(--atlas-ink); }
+.newcomer-filter-menu .newcomer-filter-all { margin-bottom: 4px; border-bottom: 1px solid var(--atlas-rule); font-weight: 650; }
+.newcomer-recent-filter { display: flex; align-items: center; gap: 5px; height: 34px; color: var(--atlas-ink); font: 11px "Noto Sans SC", "PingFang SC", sans-serif; white-space: nowrap; cursor: pointer; }
+.newcomer-recent-filter input { width: 16px; height: 16px; accent-color: var(--atlas-ink); }
+.newcomer-map-hint { max-width: 205px; color: var(--atlas-muted); font: 10px/1.35 "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-map-actions { display: flex; align-items: center; justify-content: flex-end; gap: 5px; min-width: 0; }
+.newcomer-map-actions button { height: 34px; padding: 0 11px; color: var(--atlas-ink); border: 1px solid var(--atlas-ink); border-radius: 2px; background: transparent; font: 13px "Noto Sans SC", "PingFang SC", sans-serif; cursor: pointer; }
+.newcomer-map-actions button:hover { background: rgba(23,59,50,.08); }
+.newcomer-map-actions .newcomer-generate-button { color: var(--atlas-panel); background: var(--atlas-ink); white-space: nowrap; }
+.newcomer-map-actions .newcomer-generate-button:hover { background: #245548; }
+.newcomer-map-actions button:disabled { cursor: wait; opacity: .62; }
+
+.newcomer-map-body { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) 320px; min-height: 560px; }
+.newcomer-map-chart-wrap { position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 560px; border-right: 1px solid var(--atlas-rule); }
+.newcomer-axis-toolbar {
+  display: none;
+  grid-template-columns: auto minmax(180px, 1fr) minmax(180px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 64px;
+  padding: 8px 22px;
+  border-bottom: 1px solid var(--atlas-rule);
+  background: rgba(248,245,236,.55);
+}
+.newcomer-axis-toolbar-title { display: grid; gap: 2px; min-width: 108px; }
+.newcomer-axis-toolbar-title strong { color: var(--atlas-ink); font: 600 13px "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-axis-toolbar-title span { color: var(--atlas-muted); font: 10px/1.3 "Noto Sans SC", "PingFang SC", sans-serif; white-space: nowrap; }
+.newcomer-axis-range { display: grid; gap: 4px; min-width: 0; }
+.newcomer-axis-range-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--atlas-muted); font: 11px "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-axis-range-head output { color: var(--atlas-ink); font: 600 11px "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace; }
+.newcomer-axis-range-track {
+  --range-start: 0%;
+  --range-end: 100%;
+  position: relative;
+  height: 20px;
+}
+.newcomer-axis-range-track::before,
+.newcomer-axis-range-track::after {
+  position: absolute;
+  top: 9px;
+  height: 3px;
+  content: '';
+  border-radius: 2px;
+  pointer-events: none;
+}
+.newcomer-axis-range-track::before { left: 0; right: 0; background: rgba(23,59,50,.18); }
+.newcomer-axis-range-track::after { left: var(--range-start); right: calc(100% - var(--range-end)); background: var(--atlas-teal); }
+.newcomer-axis-range-track input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  pointer-events: none;
+}
+.newcomer-axis-range-track input::-webkit-slider-runnable-track { height: 3px; background: transparent; }
+.newcomer-axis-range-track input::-webkit-slider-thumb {
+  width: 16px;
+  height: 16px;
+  margin-top: -6px;
+  appearance: none;
+  -webkit-appearance: none;
+  border: 2px solid var(--atlas-panel);
+  border-radius: 50%;
+  background: var(--atlas-ink);
+  box-shadow: 0 0 0 1px var(--atlas-ink);
+  cursor: grab;
+  pointer-events: auto;
+}
+.newcomer-axis-range-track input::-moz-range-track { height: 3px; background: transparent; }
+.newcomer-axis-range-track input::-moz-range-thumb { width: 13px; height: 13px; border: 2px solid var(--atlas-panel); border-radius: 50%; background: var(--atlas-ink); box-shadow: 0 0 0 1px var(--atlas-ink); cursor: grab; pointer-events: auto; }
+.newcomer-axis-range-track input:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--atlas-blue); outline-offset: 2px; }
+.newcomer-axis-toolbar button { height: 30px; padding: 0 10px; color: var(--atlas-ink); border: 1px solid var(--atlas-rule); border-radius: 2px; background: transparent; font: 11px "Noto Sans SC", "PingFang SC", sans-serif; cursor: pointer; white-space: nowrap; }
+.newcomer-axis-toolbar button:hover:not(:disabled) { border-color: var(--atlas-ink); background: rgba(23,59,50,.06); }
+.newcomer-axis-toolbar button:disabled { cursor: default; opacity: .4; }
+.newcomer-map-chart-canvas { position: relative; min-width: 0; min-height: 520px; }
+.newcomer-axis-reset { position: absolute; z-index: 8; top: 14px; right: 18px; height: 30px; padding: 0 10px; color: var(--atlas-ink); border: 1px solid var(--atlas-rule); border-radius: 2px; background: rgba(248,245,236,.92); font: 11px "Noto Sans SC", "PingFang SC", sans-serif; cursor: pointer; }
+.newcomer-axis-reset:hover:not(:disabled) { border-color: var(--atlas-ink); background: var(--atlas-panel); }
+.newcomer-axis-reset:disabled { cursor: default; opacity: .4; }
+.newcomer-map-chart-canvas .echarts-for-react { width: 100% !important; height: 520px !important; min-height: 520px; }
+.newcomer-map-detail { min-width: 0; padding: 18px 18px 14px; background: rgba(248,245,236,.42); }
+.newcomer-detail-kicker { color: var(--atlas-muted); font: 11px "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace; letter-spacing: .03em; }
+.newcomer-map-detail h3 { margin: 8px 0 10px; color: var(--atlas-ink); font: 500 23px/1.16 "Noto Serif SC", "Source Han Serif SC", "Songti SC", Georgia, serif; overflow-wrap: anywhere; }
+.newcomer-detail-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.newcomer-detail-tags span { padding: 3px 8px; color: var(--atlas-ink); border: 1px solid rgba(47,147,133,.55); border-radius: 2px; font: 11px "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-detail-tags span:last-child { border-color: rgba(214,154,50,.75); }
+.newcomer-map-detail dl { margin: 0; border-top: 1px solid rgba(23,59,50,.24); }
+.newcomer-map-detail dl div { display: grid; grid-template-columns: 1fr auto; align-items: center; min-height: 34px; gap: 8px; border-bottom: 1px solid rgba(23,59,50,.14); font: 13px "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-map-detail dt { color: var(--atlas-muted); }
+.newcomer-map-detail dd { margin: 0; color: var(--atlas-ink); text-align: right; font-size: 14px; }
+.newcomer-map-detail dd.trend-up { color: var(--atlas-teal); }
+.newcomer-map-detail dd.trend-down { color: #b84935; }
+.newcomer-detail-observation { margin-top: 14px; padding: 10px 11px; color: #754b34; border-left: 2px solid var(--atlas-rust); background: rgba(213,111,80,.09); font: 12px/1.55 "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-detail-reasons { margin-top: 16px; color: var(--atlas-text); font: 12px/1.6 "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-detail-reasons strong { display: block; margin-bottom: 5px; color: var(--atlas-ink); font: 500 15px "Noto Serif SC", "Source Han Serif SC", serif; }
+.newcomer-detail-reasons ul { margin: 0; padding: 0; list-style: none; }
+.newcomer-detail-reasons li { margin: 3px 0; padding-left: 18px; position: relative; }
+.newcomer-detail-reasons li::before { content: '◉'; position: absolute; left: 0; color: var(--atlas-teal); }
+.newcomer-detail-actions { display: flex; flex-wrap: nowrap; gap: 5px; margin-top: 15px; }
+.newcomer-detail-actions a,
+.newcomer-detail-actions button { display: inline-flex; align-items: center; justify-content: center; min-width: 0; min-height: 34px; padding: 0 7px; color: var(--atlas-ink); border: 1px solid var(--atlas-ink); border-radius: 2px; background: transparent; font: 11px "Noto Sans SC", "PingFang SC", sans-serif; text-decoration: none; white-space: nowrap; cursor: pointer; }
+.newcomer-detail-actions a { color: var(--atlas-panel); background: var(--atlas-ink); }
+.newcomer-detail-actions a:hover { background: #25584a; }
+.newcomer-detail-actions button:hover { background: rgba(23,59,50,.07); }
+.newcomer-detail-empty { min-height: 250px; display: grid; place-items: center; color: var(--atlas-muted); font: 12px/1.5 "Noto Sans SC", "PingFang SC", sans-serif; text-align: center; }
+
+.newcomer-map-legend { display: flex; align-items: center; flex-wrap: wrap; gap: 7px 22px; margin: 0 22px 12px; padding-top: 8px; border-top: 1px solid var(--atlas-rule); color: var(--atlas-muted); font: 11px/1.35 "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-map-legend > div { display: flex; align-items: center; flex-wrap: wrap; gap: 7px; }
+.newcomer-map-legend strong { width: 54px; color: var(--atlas-ink); font-weight: 500; }
+.newcomer-map-legend span { display: inline-flex; align-items: center; gap: 4px; }
+.newcomer-map-legend span i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; }
+.legend-trend-up { color: var(--atlas-teal); }
+.legend-trend-down { color: #b84935; }
+.bubble-size-sample i { border: 1px solid var(--atlas-ink); background: transparent !important; }
+.bubble-size-sample:nth-child(2) i { width: 20px !important; height: 20px !important; }
+.bubble-size-sample:nth-child(3) i { width: 15px !important; height: 15px !important; }
+.bubble-size-sample:nth-child(4) i { width: 10px !important; height: 10px !important; }
+.emerging-legend i { width: 18px !important; height: 18px !important; border: 1px dashed var(--atlas-ink); background: transparent !important; }
+
+.newcomer-task-modal-backdrop { position: fixed; z-index: 120; inset: 0; display: grid; place-items: center; padding: 24px; background: rgba(23,59,50,.36); }
+.newcomer-task-modal { width: min(760px, 100%); max-height: min(700px, calc(100vh - 48px)); overflow: auto; color: var(--atlas-text); border: 1px solid var(--atlas-ink); border-radius: 3px; background: var(--atlas-panel); box-shadow: 0 16px 40px rgba(23,59,50,.22); }
+.newcomer-task-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 18px 20px 14px; border-bottom: 1px solid var(--atlas-rule); }
+.newcomer-task-modal-kicker { color: var(--atlas-muted); font: 10px/1.2 "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace; letter-spacing: .05em; }
+.newcomer-task-modal h3 { margin: 6px 0 0; color: var(--atlas-ink); font: 550 22px/1.2 "Noto Serif SC", "Source Han Serif SC", Georgia, serif; overflow-wrap: anywhere; }
+.newcomer-task-modal-close { width: 30px; height: 30px; color: var(--atlas-ink); border: 1px solid var(--atlas-rule); border-radius: 2px; background: transparent; font: 22px/1 "Noto Sans SC", sans-serif; cursor: pointer; }
+.newcomer-task-modal-close:hover { background: rgba(23,59,50,.08); }
+.newcomer-task-modal-state { display: grid; min-height: 170px; place-items: center; align-content: center; gap: 10px; padding: 24px; color: var(--atlas-muted); font: 13px/1.5 "Noto Sans SC", "PingFang SC", sans-serif; text-align: center; }
+.newcomer-task-modal-error strong { color: #9d4434; font-weight: 500; }
+.newcomer-task-modal-error button { padding: 7px 12px; color: var(--atlas-ink); border: 1px solid var(--atlas-ink); border-radius: 2px; background: transparent; font: inherit; cursor: pointer; }
+.newcomer-task-groups { display: grid; gap: 16px; padding: 16px 20px 20px; }
+.newcomer-task-group { border-top: 1px solid rgba(23,59,50,.2); }
+.newcomer-task-group-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 10px 0 7px; }
+.newcomer-task-group-heading h4 { margin: 0; color: var(--atlas-ink); font: 550 14px "Noto Serif SC", "Source Han Serif SC", Georgia, serif; }
+.newcomer-task-group-heading span { color: var(--atlas-muted); font: 11px "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace; }
+.newcomer-task-group ul { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; }
+.newcomer-task-group li { padding: 9px 10px; border: 1px solid rgba(23,59,50,.16); border-radius: 2px; background: rgba(255,255,255,.18); }
+.newcomer-task-item-main { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.newcomer-task-item-main a, .newcomer-task-item-main strong { color: var(--atlas-ink); font: 500 13px/1.4 "Noto Sans SC", "PingFang SC", sans-serif; overflow-wrap: anywhere; }
+.newcomer-task-item-main a { text-decoration: none; }
+.newcomer-task-item-main a:hover { text-decoration: underline; }
+.newcomer-task-issue { flex: 0 0 auto; color: var(--atlas-muted); font: 11px "IBM Plex Mono", "JetBrains Mono", ui-monospace, monospace; }
+.newcomer-task-item-meta { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 5px; color: var(--atlas-muted); font: 11px/1.35 "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-task-item-meta span + span::before { content: '·'; margin-right: 12px; color: rgba(23,59,50,.45); }
+
+.newcomer-map-connector { position: absolute; z-index: 8; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.newcomer-map-connector path { fill: none; stroke: rgba(23,59,50,.65); stroke-width: 1; }
+.newcomer-map-connector circle { fill: var(--atlas-ink); }
+.newcomer-distribution-note { position: static; display: flex; align-items: flex-start; gap: 8px; margin: 0 22px 14px; padding-top: 8px; border-top: 1px solid var(--atlas-rule); color: var(--atlas-muted); font: 12px/1.5 "Noto Sans SC", "PingFang SC", sans-serif; pointer-events: none; }
+.newcomer-distribution-note > span { color: var(--atlas-ink); font-size: 17px; line-height: 1.1; }
+.newcomer-distribution-note strong { color: var(--atlas-ink); font-weight: 600; }
+.newcomer-map-state { display: grid; min-height: 520px; place-items: center; gap: 10px; align-content: center; padding: 28px; color: var(--atlas-muted); font: 12px/1.5 "Noto Sans SC", "PingFang SC", sans-serif; text-align: center; }
+.newcomer-map-state strong { color: var(--atlas-ink); font-weight: 500; }
+.newcomer-map-state button { padding: 8px 12px; color: var(--atlas-ink); border: 1px solid var(--atlas-ink); border-radius: 2px; background: transparent; font: inherit; cursor: pointer; }
+.newcomer-map-skeleton { background: repeating-linear-gradient(135deg, transparent 0, transparent 10px, rgba(23,59,50,.035) 10px, rgba(23,59,50,.035) 12px); }
+.newcomer-map-empty-overlay { position: absolute; inset: 0; display: grid; place-content: center; color: var(--atlas-ink); background: rgba(248,245,236,.72); font: 14px/1.7 "Noto Serif SC", "Source Han Serif SC", serif; text-align: center; pointer-events: none; }
+.newcomer-map-empty-overlay small { color: var(--atlas-muted); font: 12px "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-map-footnote { display: flex; align-items: center; gap: 8px; min-height: 46px; padding: 8px 24px; color: var(--atlas-muted); border-top: 1px solid var(--atlas-rule); font: 12px/1.45 "Noto Sans SC", "PingFang SC", sans-serif; }
+.newcomer-map-footnote span { color: var(--atlas-ink); font-size: 16px; }
+
+@media (max-width: 1199px) {
+  .newcomer-map-header { grid-template-columns: minmax(220px, 1fr) auto; }
+  .newcomer-map-controls { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; padding-top: 2px; }
+  .newcomer-map-actions { grid-column: 2; grid-row: 1; }
+  .newcomer-map-body { grid-template-columns: minmax(0, 1fr) 280px; }
+  .newcomer-map-detail { padding-left: 16px; padding-right: 16px; }
+}
+@media (max-width: 1023px) {
+  .newcomer-detail-actions { flex-wrap: wrap; }
+  .newcomer-map-controls { justify-content: flex-start; }
+  .newcomer-axis-toolbar { grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) auto; }
+  .newcomer-axis-toolbar-title { grid-column: 1 / -1; }
+  .newcomer-map-body { display: block; }
+  .newcomer-map-chart-wrap { min-height: 560px; border-right: 0; border-bottom: 1px solid var(--atlas-rule); }
+  .newcomer-map-chart-canvas, .newcomer-map-chart-canvas .echarts-for-react { min-height: 520px; }
+  .newcomer-map-detail { min-height: 380px; }
+  .newcomer-map-connector { display: none; }
+}
+
+@media (max-width: 639px) {
+  .newcomer-opportunity-map { min-height: 0; }
+  .newcomer-map-header { grid-template-columns: 1fr; padding: 16px; }
+  .newcomer-map-title { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .newcomer-map-title h2 { font-size: 21px; }
+  .newcomer-map-controls { display: grid; grid-column: 1; grid-row: 2; grid-template-columns: repeat(2, minmax(0, 1fr)); width: 100%; }
+  .newcomer-map-actions { grid-column: 1; grid-row: 3; justify-content: flex-start; }
+  .newcomer-filter-field:nth-child(2), .newcomer-filter-field:first-child { min-width: 0; }
+  .newcomer-recent-filter, .newcomer-map-hint { grid-column: 1 / -1; }
+  .newcomer-map-actions { display: grid; grid-template-columns: repeat(3, 1fr); }
+  .newcomer-axis-toolbar { grid-template-columns: 1fr; gap: 10px; padding: 12px 16px; }
+  .newcomer-axis-toolbar-title { grid-column: auto; }
+  .newcomer-axis-toolbar button { justify-self: start; }
+  .newcomer-map-chart-wrap { min-height: 560px; }
+  .newcomer-map-chart-canvas, .newcomer-map-chart-canvas .echarts-for-react { min-height: 560px; }
+  .newcomer-map-chart-canvas .echarts-for-react { height: 560px !important; }
+  .newcomer-map-detail { padding: 20px 16px; }
+  .newcomer-detail-actions { display: grid; grid-template-columns: 1fr; }
+  .newcomer-task-modal-backdrop { padding: 12px; }
+  .newcomer-task-modal-header { padding: 15px 16px 12px; }
+  .newcomer-task-groups { padding: 14px 16px 16px; }
+  .newcomer-map-footnote { align-items: flex-start; padding: 12px 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .newcomer-opportunity-map * { scroll-behavior: auto !important; }
+}

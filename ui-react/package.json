@@ -8,17 +8,15 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "test": "node --experimental-strip-types --test --experimental-test-isolation=none src/components/community-health/__tests__/*.test.ts src/components/newcomer/__tests__/*.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "echarts": "^6.0.0",
     "echarts-for-react": "^3.0.5",
-    "marked": "^15.0.4",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "react-markdown": "^10.1.0",
     "reagraph": "^4.32.0",
-    "remark-gfm": "^4.0.1",
     "three": "0.184.0",
     "three-spritetext": "^1.10.0"
   },

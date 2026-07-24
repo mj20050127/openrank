@@ -286,7 +286,6 @@
   cursor: pointer;
 }
 .compact-header-actions button:hover { color: var(--obs-terracotta); border-bottom-color: var(--obs-terracotta); }
-.compact-header-actions button.primary { color: var(--obs-ink); border: 0; background: transparent; box-shadow: none; }
 .compact-header-actions button:disabled { opacity: .55; cursor: wait; }
 .compact-header-actions svg { width: 17px; height: 17px; flex: 0 0 auto; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
@@ -316,10 +315,6 @@
 }
 .segmented-control button.active { color: var(--obs-terracotta); background: transparent; font-weight: 800; }
 .segmented-control button.active::after { position: absolute; right: 10px; bottom: 0; left: 10px; height: 2px; background: var(--obs-terracotta); content: ''; }
-.range-ruler { display: grid; grid-template-columns: auto minmax(50px, 1fr) auto minmax(50px, 1fr) auto; align-items: center; gap: 7px; min-width: 0; color: var(--obs-ink-muted); font: 500 8px "IBM Plex Mono", "SFMono-Regular", Consolas, monospace; }
-.range-ruler i { height: 9px; opacity: .75; background: repeating-linear-gradient(90deg, var(--obs-rule-strong) 0 1px, transparent 1px 8px); border-top: 1px solid var(--obs-rule); border-bottom: 1px solid var(--obs-rule); }
-.range-ruler strong { color: var(--obs-ink-soft); font-weight: 650; white-space: nowrap; }
-
 @media (max-width: 1439px) {
   .compact-health-header__main { grid-template-columns: minmax(245px, 1.12fr) minmax(250px, 1fr) 128px 68px 96px 96px; }
   .compact-repo { gap: 11px; padding: 17px 14px; }
@@ -356,7 +351,6 @@
   .range-control { align-items: flex-start; flex-direction: column; gap: 4px; }
   .segmented-control { width: 100%; }
   .segmented-control button { min-width: 0; flex: 1; padding-inline: 3px; }
-  .range-ruler { grid-template-columns: auto minmax(30px, 1fr) auto minmax(30px, 1fr) auto; }
 }
 
 @media (max-width: 460px) {
@@ -409,7 +403,6 @@
 }
 .health-scale__ticks { margin-top: 6px; font-size: 9px; }
 .compact-health-header__controls { min-height: 46px; border-top-color: var(--obs-rule); }
-.range-ruler { font-size: 9px; }
 @media (max-width: 1439px) {
   .compact-health-header__main { min-height: 132px; }
   .compact-repo { padding-inline: 15px; }
@@ -543,24 +536,6 @@
 .segmented-control { height: 29px; }
 .segmented-control button { min-width: 54px; padding-inline: 8px; font-size: 9px; }
 .segmented-control button.active::after { right: 8px; bottom: 1px; left: 8px; }
-.range-ruler {
-  position: relative;
-  display: block;
-  width: min(29vw, 410px);
-  min-width: 220px;
-  height: 9px;
-  flex: 0 1 410px;
-}
-.range-ruler i {
-  display: block;
-  width: 100%;
-  height: 9px;
-  opacity: .72;
-  border-top: 1px solid var(--obs-rule);
-  border-bottom: 1px solid var(--obs-rule);
-  background: repeating-linear-gradient(90deg, var(--obs-rule-strong) 0 1px, transparent 1px 8px);
-}
-
 @media (max-width: 1439px) and (min-width: 1100px) {
   .compact-health-header__main { min-height: 127px; }
   .compact-repo { gap: 13px; padding-inline: 15px 10px; }
@@ -575,7 +550,6 @@
   .compact-header-actions { padding-inline: 11px 6px; }
   .compact-header-actions button { gap: 5px; font-size: 9px; }
   .compact-health-header__controls { padding-inline: 20px; }
-  .range-ruler { width: min(28vw, 390px); }
 }
 
 @media (max-width: 1099px) {
@@ -588,7 +562,6 @@
   .header-completeness { grid-column: 3; }
   .compact-header-actions { grid-column: 4; grid-row: 2; }
   .compact-health-header__controls { display: grid; grid-template-columns: minmax(0, 1fr); min-height: 0; gap: 3px; padding-block: 5px; }
-  .range-ruler { width: 100%; max-width: none; min-width: 0; }
 }
 
 @media (max-width: 700px) {

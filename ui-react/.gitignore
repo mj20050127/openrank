@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 .chrome-*
+.codex-chrome-*
 
 # Editor directories and files
 .vscode/*

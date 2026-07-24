@@ -3,18 +3,6 @@ from datetime import date
 from typing import Any, Dict, Optional
 from pydantic import BaseModel, Field
 
-class TimeWindow(BaseModel):
-    days: int = 90
-    start: Optional[str] = None
-    end: Optional[str] = None
-
-class ChatRequest(BaseModel):
-    query: str = Field(..., description="User query")
-    repo: Optional[str] = Field(None, description="owner/repo")
-    repos: list[str] = Field(default_factory=list, description="repo list for portfolio")
-    portfolio: Optional[str] = None
-    time_window: TimeWindow = Field(default_factory=TimeWindow)
-
 
 class BatchTrendRequest(BaseModel):
     repos: list[str] = Field(..., description="repo list")
@@ -33,8 +21,11 @@ class HealthIngestRequest(BaseModel):
 
 
 class NewcomerPlanRequest(BaseModel):
-    domain: str = Field(..., description="user selected domain")
-    stack: str = Field(..., description="user selected stack")
+    domains: list[str] = Field(default_factory=list, description="user selected domains")
+    stacks: list[str] = Field(default_factory=list, description="user selected stacks")
+    # Legacy scalar fields remain accepted for older clients.
+    domain: Optional[str] = Field(None, description="legacy single selected domain")
+    stack: Optional[str] = Field(None, description="legacy single selected stack")
     time_per_week: str = Field(..., description="time availability per week")
     keywords: str = Field("", description="additional keywords for matching")
 

@@ -596,6 +596,18 @@
 .health-observatory-main .ecosystem-detail-actions button,
 .health-observatory-main .ecosystem-detail-actions a { border-radius: 2px; }
 .health-observatory-main .ecosystem-detail-actions .primary { border-color: #14231f; background: #14231f; }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr); gap: 8px; margin-top: 18px; padding: 14px 0 2px; border-top: 1px solid rgba(27, 47, 41, .14); background: linear-gradient(180deg, rgba(250, 248, 241, 0), rgba(250, 248, 241, .98) 12px); }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions button,
+.health-observatory-main .ecosystem-detail-actions.sticky-actions a { min-height: 40px; box-sizing: border-box; justify-content: center; gap: 7px; padding: 0 12px; border-radius: 7px; font-size: 10px; font-weight: 720; letter-spacing: .015em; box-shadow: 0 5px 14px rgba(20, 35, 31, .08); transition: transform 150ms ease, box-shadow 150ms ease, border-color 150ms ease, background 150ms ease; }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions button { color: #2f433b; border: 1px solid rgba(27, 47, 41, .3); background: #faf8f1; }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions button::before { display: grid; width: 18px; height: 18px; place-items: center; flex: 0 0 18px; border-radius: 50%; content: '\2212'; color: #315b9a; background: rgba(49, 91, 154, .1); font-size: 14px; line-height: 1; }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions button.primary { color: #faf8f1; border-color: #315b9a; background: #315b9a; }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions button.primary::before { content: '\002B'; color: #315b9a; background: #faf8f1; }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions a { color: #faf8f1; border: 1px solid #14231f; background: #14231f; }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions a::before { display: grid; width: 20px; height: 20px; place-items: center; flex: 0 0 20px; border-radius: 50%; content: 'GH'; color: #14231f; background: #faf8f1; font: 800 7px/1 Arial, sans-serif; }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions button:hover,
+.health-observatory-main .ecosystem-detail-actions.sticky-actions a:hover { transform: translateY(-1px); box-shadow: 0 8px 18px rgba(20, 35, 31, .14); }
+.health-observatory-main .ecosystem-detail-actions.sticky-actions button:disabled { transform: none; opacity: .58; box-shadow: none; cursor: wait; }
 .health-observatory-main .ecosystem-notice { color: #8d4a35; border-top-color: rgba(196, 95, 58, .22); background: #f4e9df; }
 .health-observatory-main .ecosystem-meta { padding: 6px 10px; color: #718079; border-top: 1px solid rgba(27, 47, 41, .24); background: #ebe7dc; }
 

@@ -1,6 +1,11 @@
 ﻿import unittest
 
-from app.services.ecosystem_graph import aggregate_contribution_counts, contributor_avatar_url
+from app.services.ecosystem_graph import MAX_CONTRIBUTORS, aggregate_contribution_counts, contributor_avatar_url
+
+
+class EcosystemGraphLimitTests(unittest.TestCase):
+    def test_contributor_limit_supports_thirty_nodes(self):
+        self.assertEqual(MAX_CONTRIBUTORS, 30)
 
 
 class ContributorAvatarUrlTests(unittest.TestCase):

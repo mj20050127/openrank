@@ -1,5 +1,7 @@
 # 健康分评估模型
 
+> **口径说明**：本文档保留的是历史月度 HealthOverviewDaily 模型说明。仓库当前即时体检和排行榜以后端 current-v1 为准，实时字段、缺失值语义和治理建议请以 [Metric_Dictionary.md](Metric_Dictionary.md) 与 [Governance_Advice_Rules.md](Governance_Advice_Rules.md) 为准。两者共享五维总权重 30%/25%/20%/15%/10%，但即时模型的子指标和证据窗口不同。
+
 ## 概述
 
 健康分（Health Score）是一个综合评估开源项目整体健康状况的指标，采用 **五维度加权评分模型**，总分 **0-100 分**。

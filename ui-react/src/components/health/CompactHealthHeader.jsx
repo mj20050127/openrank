@@ -16,7 +16,6 @@ function CompactIcon({ name }) {
   if (name === 'sync') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 11a8 8 0 1 0-2.3 5.7" /><path d="M20 5v6h-6" /></svg>;
   if (name === 'github') return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8a9.3 9.3 0 0 0-2.9 18.1c.5.1.6-.2.6-.5v-1.8c-2.8.6-3.4-1.2-3.4-1.2-.5-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 0 1.6 1.1 1.6 1.1.9 1.6 2.4 1.1 2.9.9.1-.7.4-1.1.7-1.4-2.2-.3-4.6-1.1-4.6-4.9 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.5 9.5 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.8-2.3 4.6-4.6 4.9.4.3.7.9.7 1.8v2.7c0 .3.2.6.7.5A9.3 9.3 0 0 0 12 2.8Z" /></svg>;
   if (name === 'fork') return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="5" r="2" /><circle cx="17" cy="5" r="2" /><circle cx="12" cy="19" r="2" /><path d="M7 7v2.5c0 2 1.6 3.5 3.5 3.5H12m5-6v2.5c0 2-1.6 3.5-3.5 3.5H12v4" /></svg>;
-  if (name === 'robot') return <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="7" width="16" height="12" rx="3" /><path d="M12 7V4m-3 8h.01M15 12h.01M8 16h8M2 12v3m20-3v3" /></svg>;
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m12 3 1.4 4.1L17.5 8.5l-4.1 1.4L12 14l-1.4-4.1-4.1-1.4 4.1-1.4L12 3Z" /><path d="m18.5 14 .8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2Z" /></svg>;
 }
 
@@ -215,13 +214,12 @@ export default function CompactHealthHeader({
   range,
   onRange,
   latest,
-  historyStart,
+
   historyLatest,
-  historyCount,
+
   anomalyCount,
   status,
   onRefresh,
-  onOpenAI,
   repositories = [],
   onSelectRepo,
   repositoryActionStatus,
@@ -233,8 +231,8 @@ export default function CompactHealthHeader({
     .filter((item) => item.value !== null && item.value !== undefined)
     .sort((a, b) => a.value - b.value)[0];
   const snapshot = formatSnapshotDate(historyLatest?.dt || latest?.dt);
-  const startMonth = String(historyStart?.dt || '').slice(0, 7) || '—';
-  const endMonth = String(historyLatest?.dt || '').slice(0, 7) || '—';
+
+
   const repositoryUrl = repo ? `https://github.com/${repo}` : '#';
 
   const catalogRepository = repositories.find((item) => item.repo === repo);
@@ -289,9 +287,6 @@ export default function CompactHealthHeader({
         <button type="button" className="secondary" onClick={onRefresh} disabled={status === 'refreshing'} title="同步当前仓库健康数据">
           <CompactIcon name="sync" /><span>{status === 'refreshing' ? '同步中…' : '同步数据'}</span>
         </button>
-        {onOpenAI && <button type="button" className="primary" onClick={onOpenAI} title="打开现有 AI 治理助手">
-          <CompactIcon name="robot" /><span className="ai-action-label">AI 治理助手</span>
-        </button>}
       </div>
     </div>
 
@@ -302,7 +297,7 @@ export default function CompactHealthHeader({
           {RANGE_OPTIONS.filter((item) => item.value !== '60').map((item) => <button type="button" key={item.value} className={range === item.value ? 'active' : ''} onClick={() => onRange(item.value)}>{item.label.replace('历史', '')}</button>)}
         </div>
       </div>
-      <div className="range-ruler" aria-label={`数据范围 ${startMonth} 至 ${endMonth}，共 ${historyCount || 0} 个月`}><i /></div>
+
     </div>
   </header>;
 }

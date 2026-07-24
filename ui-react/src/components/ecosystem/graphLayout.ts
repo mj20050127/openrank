@@ -9,11 +9,31 @@ const NORMALIZED_ANCHORS = Object.freeze({
   lifecycle: { x: 0.76, y: 0.62 },
   selected: { x: 0.59, y: 0.46 },
   related: [
-    { x: 0.87, y: 0.25 },
-    { x: 0.9, y: 0.48 },
-    { x: 0.87, y: 0.72 },
+    { x: 0.80, y: 0.12 },
+    { x: 0.80, y: 0.29 },
+    { x: 0.80, y: 0.46 },
   ],
 });
+
+const STRUCTURE_GRID_CONFIG = Object.freeze({
+  core: { columns: 3, gapX: 106, gapY: 82 },
+  active: { columns: 5, gapX: 96, gapY: 76 },
+  lifecycle: { columns: 3, gapX: 110, gapY: 88 },
+});
+
+const STRUCTURE_COMMUNITY_ANCHORS = Object.freeze({
+  core: { x: 0.25, y: 0.18 },
+  active: { x: 0.23, y: 0.71 },
+  lifecycle: { x: 0.77, y: 0.62 },
+});
+
+const STRUCTURE_JUNCTION_ANCHORS = Object.freeze({
+  core: { x: 0.39, y: 0.31 },
+  active: { x: 0.44, y: 0.62 },
+  lifecycle: { x: 0.66, y: 0.56 },
+});
+
+const STRUCTURE_ROOT_ANCHOR = Object.freeze({ x: 0.56, y: 0.47 });
 
 export const COMMUNITY_STYLE = Object.freeze({
   core: { fill: '#5879A5', stroke: '#5879A5', label: '核心维护者社区\nCORE MAINTAINERS' },
@@ -181,11 +201,69 @@ function placeCommunity(members, key, center, rect) {
   return positions;
 }
 
+function placeStructureGrid(members, key, center, rect) {
+  const config = STRUCTURE_GRID_CONFIG[key];
+  const scale = clamp(Math.min(rect.width / 844, rect.height / 474), 0.84, 1.18);
+  const rowCount = Math.ceil(members.length / config.columns);
+  const positions = new Map();
+
+  members.forEach((node, index) => {
+    const row = Math.floor(index / config.columns);
+    const rowStart = row * config.columns;
+    const rowMembers = Math.min(config.columns, members.length - rowStart);
+    const column = index - rowStart;
+    const x = center.x + (column - (rowMembers - 1) / 2) * config.gapX * scale;
+    const y = center.y + ((rowCount - 1) / 2 - row) * config.gapY * scale;
+    positions.set(node.id, { x, y, z: 0 });
+  });
+
+  return positions;
+}
+
+export function getStructureJunctionPositions(plotSize = DEFAULT_PLOT_SIZE) {
+  const rect = createPlotRect(plotSize);
+  return Object.fromEntries(
+    Object.entries(STRUCTURE_JUNCTION_ANCHORS).map(([key, anchor]) => [key, { ...plotPoint(rect, anchor), z: 0 }]),
+  );
+}
+export function prepareStructurePositions(nodes, selectedId = null, plotSize = DEFAULT_PLOT_SIZE) {
+  const anchors = getNarrativeAnchors(plotSize);
+  const communities = new Map([['core', []], ['active', []], ['lifecycle', []]]);
+  for (const node of nodes) {
+    if (node.type === 'contributor') communities.get(communityKey(node)).push(node);
+  }
+  for (const members of communities.values()) {
+    members.sort((left, right) => Number(right.contribution_score || 0) - Number(left.contribution_score || 0)
+      || String(left.id).localeCompare(String(right.id)));
+  }
+
+  const positions = new Map();
+  for (const [key, members] of communities) {
+    const center = plotPoint(anchors.rect, STRUCTURE_COMMUNITY_ANCHORS[key]);
+    for (const [id, position] of placeStructureGrid(members, key, center, anchors.rect)) {
+      positions.set(id, position);
+    }
+  }
+
+  const related = nodes
+    .filter((node) => node.type === 'repository' && !node.is_root && node.parent_id === selectedId)
+    .sort((left, right) => Number(right.association_strength || 0) - Number(left.association_strength || 0));
+
+  return nodes.map((node) => {
+    if (node.is_root) return withFixedPosition(node, plotPoint(anchors.rect, STRUCTURE_ROOT_ANCHOR));
+    if (node.id === selectedId) return withFixedPosition(node, positions.get(node.id) || anchors[communityKey(node)]);
+    const relatedIndex = related.findIndex((item) => item.id === node.id);
+    if (relatedIndex >= 0) return withFixedPosition(node, anchors.related[relatedIndex] || anchors.related.at(-1));
+    if (node.type === 'repository') return withFixedPosition(node, seededPosition(node.id, anchors.root));
+    return withFixedPosition(node, positions.get(node.id) || anchors[communityKey(node)]);
+  });
+}
+
 export function prepareNarrativePositions(nodes, selectedId = null, plotSize = DEFAULT_PLOT_SIZE) {
   const anchors = getNarrativeAnchors(plotSize);
   const communities = new Map([['core', []], ['active', []], ['lifecycle', []]]);
   for (const node of nodes) {
-    if (node.type === 'contributor' && node.id !== selectedId) communities.get(communityKey(node)).push(node);
+    if (node.type === 'contributor') communities.get(communityKey(node)).push(node);
   }
   for (const members of communities.values()) {
     members.sort((a, b) => Number(b.contribution_score || 0) - Number(a.contribution_score || 0) || String(a.id).localeCompare(String(b.id)));
@@ -207,7 +285,7 @@ export function prepareNarrativePositions(nodes, selectedId = null, plotSize = D
       return withFixedPosition(node, { x: Number(node.x), y: Number(node.y) }, Number(node.z || 0));
     }
     if (node.is_root) return withFixedPosition(node, anchors.root);
-    if (node.id === selectedId) return withFixedPosition(node, anchors.selected);
+    if (node.id === selectedId) return withFixedPosition(node, communityPositions.get(node.id) || anchors[communityKey(node)]);
     const relatedIndex = related.findIndex((item) => item.id === node.id);
     if (relatedIndex >= 0) return withFixedPosition(node, anchors.related[relatedIndex] || anchors.related.at(-1));
     if (node.type === 'repository') return withFixedPosition(node, seededPosition(node.id, anchors.root));
@@ -226,7 +304,7 @@ function densityBandwidth(members) {
   return clamp(base + extent * 0.025, 28, 52);
 }
 
-export function buildCommunityZones(nodes, selectedId = null, focusCommunity = null) {
+export function buildCommunityZones(nodes, selectedId = null, focusCommunity = null, { compact = false } = {}) {
   return ['core', 'active', 'lifecycle'].flatMap((key) => {
     const members = nodes.filter((node) => node.type === 'contributor' && node.id !== selectedId && communityKey(node) === key);
     if (!members.length) return [];
@@ -243,9 +321,10 @@ export function buildCommunityZones(nodes, selectedId = null, focusCommunity = n
     }));
     const thresholdCount = key === 'active' ? 10 : 8;
     const density = buildDensityContours(samples, {
-      bandwidth: densityBandwidth(members),
+      bandwidth: densityBandwidth(members) * (compact ? 0.74 : 1),
       thresholdCount,
     });
+    const contourLevels = compact ? density.levels.slice(3) : density.levels;
     const radiusX = Math.max(Math.abs(density.bounds.minX), Math.abs(density.bounds.maxX));
     const radiusY = Math.max(Math.abs(density.bounds.minY), Math.abs(density.bounds.maxY));
     const communityState = focusCommunity ? (focusCommunity === key ? 'focused' : 'dimmed') : 'default';
@@ -270,7 +349,7 @@ export function buildCommunityZones(nodes, selectedId = null, focusCommunity = n
         radiusX,
         radiusY,
         samples,
-        contours: density.levels,
+        contours: contourLevels,
         densityBounds: density.bounds,
         bandwidth: density.bandwidth,
         memberCount: members.length,

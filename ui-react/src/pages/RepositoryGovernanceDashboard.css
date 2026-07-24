@@ -120,14 +120,13 @@
 .risk-pill.neutral, .priority.p2 { color: #475569; background: #edf2f7; }
 .priority.p1 { color: #9a5708; background: #fff0d9; }
 .evidence-focus { margin: 14px 0; padding: 12px; border-left: 3px solid var(--gov-cyan); background: #edfafa; }
-.evidence-focus span, .ai-brief span { display: block; color: #087c79; font-size: 10px; }
+.evidence-focus span { display: block; color: #087c79; font-size: 10px; }
 .evidence-focus strong { display: block; margin: 5px 0; font-size: 16px; }
-.evidence-focus p, .ai-brief p { margin: 0; color: var(--gov-muted); font-size: 11px; line-height: 1.55; }
+.evidence-focus p { margin: 0; color: var(--gov-muted); font-size: 11px; line-height: 1.55; }
 .evidence-list { margin: 0; }
 .evidence-list div { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-bottom: 1px solid #edf2f7; font-size: 11px; }
 .evidence-list dt { color: var(--gov-muted); }
 .evidence-list dd { max-width: 58%; margin: 0; text-align: right; overflow-wrap: anywhere; }
-.ai-brief { margin: 14px 0; padding: 12px; border-radius: 7px; background: #eef5ff; }
 .action-card { padding: 12px; border: 1px solid #f0d4a8; border-radius: 7px; background: #fffaf1; }
 .action-card > div { display: flex; align-items: center; gap: 8px; }
 .action-card strong { font-size: 12px; }
@@ -674,13 +673,6 @@
   padding: 7px 0;
 }
 
-.health-evidence-row .ai-brief {
-  grid-area: brief;
-  align-self: stretch;
-  margin: 0;
-  padding: 11px 12px;
-}
-
 .health-evidence-row .action-card {
   grid-area: action;
   align-self: stretch;
@@ -856,7 +848,6 @@
   .health-evidence-row .section-heading,
   .health-evidence-row .evidence-focus,
   .health-evidence-row .evidence-list,
-  .health-evidence-row .ai-brief,
   .health-evidence-row .action-card {
     margin-top: 10px;
   }

@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 
 from app.db.base import get_db
-from app.services.ecosystem_graph import build_root_graph, expand_contributor
+from app.services.ecosystem_graph import MAX_CONTRIBUTORS, build_root_graph, expand_contributor
 
 router = APIRouter(prefix="/api/ecosystem", tags=["ecosystem"])
 
@@ -17,7 +17,7 @@ def ecosystem_graph(
     root_repo: str = Query(..., pattern=r"^[^/]+/[^/]+$"),
     start: date | None = None,
     end: date | None = None,
-    contributor_limit: int = Query(20, ge=1, le=20),
+    contributor_limit: int = Query(MAX_CONTRIBUTORS, ge=1, le=MAX_CONTRIBUTORS),
     db: Session = Depends(get_db),
 ):
     try:
