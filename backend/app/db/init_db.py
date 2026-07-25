@@ -56,6 +56,7 @@ def init_db():
                 """
             )
         )
+
         conn.execute(
             text(
                 """
@@ -67,3 +68,7 @@ def init_db():
                 """
             )
         )
+
+    from app.services.bootstrap_snapshot import import_bootstrap_snapshot
+
+    import_bootstrap_snapshot()

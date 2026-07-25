@@ -1,6 +1,6 @@
 ﻿import { useMemo, useState } from 'react';
 
-const MODE_OPTIONS = [['structure', '结构'], ['community', '社区'], ['path', '路径']];
+const MODE_OPTIONS = [['structure', '结构'], ['community', '社区']];
 
 function CommandIcon({ type }) {
   if (type === 'search') return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="5.5" /><path d="m15 15 4 4" /></svg>;

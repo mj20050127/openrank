@@ -297,6 +297,10 @@ flowchart TB
 
 ## 10. 本地运行
 
+> **数据说明**：GitHub 仓库数据规模较大，而本项目默认使用本地数据库。如果从零开始在线采集，助教可能需要花费较长时间等待数据拉取和处理。为降低复现与验收成本，本项目准备了 11 个仓库的 JSON 数据快照，无需助教额外爬取数据，启动后即可快速阅览项目。
+>
+> **功能说明**：开源新人机会地图通常需要分析较大规模的仓库候选集，才能生成更丰富、更有区分度的推荐结果。当前离线快照仅包含 11 个代表性仓库，因此该功能可以完整演示推荐流程，但展示效果可能不及大规模真实数据场景。
+
 ### 10.1 环境要求
 
 - Docker Desktop（启动 PostgreSQL）
@@ -333,6 +337,34 @@ source .venv/bin/activate
 
 ### 10.4 准备示例数据（可选）
 
+首次启动后端时，如果检测到空数据库，系统会自动从
+`backend/app/data/bootstrap_seed.json` 导入课程验收快照。快照包含 11 个内置仓库的
+OpenDigger 月度指标、健康评分、推荐元数据、新人任务与上手文档，因此首次展示不依赖
+GitHub Token，也不要求使用者临时下载其他仓库：
+
+- `deepset-ai/haystack`
+- `apache/airflow`
+- `microsoft/onnxruntime`
+- `timescale/timescaledb`
+- `apache/beam`
+- `ant-design/ant-design`
+- `Nixtla/mlforecast`
+- `maplibre/maplibre-gl-js`
+- `PrefectHQ/prefect`
+- `aeon-toolkit/aeon`
+- `microsoft/vscode`
+
+新人机会地图会在这 11 个内置候选中，按照用户方向、技术栈、响应效率、近期活跃、
+新人任务供给和上手文档进行相对推荐。快照导入是幂等的，不会覆盖之后主动刷新的数据。
+
+如需关闭自动导入，可在后端环境变量中设置：
+
+```env
+BOOTSTRAP_SEED_ENABLED=false
+```
+
+下面的在线采集命令只用于维护者更新快照或接入其他仓库，助教验收时不需要执行。
+
 在 `backend` 目录、虚拟环境已激活的前提下：
 
 ```powershell
@@ -341,6 +373,13 @@ python -m scripts.bootstrap_repo --repo microsoft/vscode --limit-months 36
 ```
 
 脚本只注册/拉取真实来源，不会伪造指标。已有数据库数据时可以跳过；也可以在前端搜索仓库并等待导入任务完成。
+
+维护者需要重新生成内置快照时，可先更新推荐数据，再导出当前数据库中的 11 个仓库：
+
+```powershell
+python -m scripts.refresh_bootstrap_recommendation_data
+python -m scripts.export_bootstrap_snapshot
+```
 
 ### 10.5 启动前端
 

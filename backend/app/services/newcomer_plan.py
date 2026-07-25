@@ -130,16 +130,36 @@ class NewcomerPlanService:
             "copyable_checklist": checklist,
         }
     def get_repo_issues(self, repo_full_name: str, readiness: float = 60.0) -> Dict[str, List[Dict[str, Any]]]:
-        self.fetcher.refresh_repo_issues(repo_full_name)
+        cached_issue = self.db.execute(
+            select(RepoIssue.id).where(RepoIssue.repo_full_name == repo_full_name).limit(1)
+        ).scalar()
+        repository_status = self.db.get(RepositoryDataStatus, repo_full_name)
+        is_curated_snapshot = bool(
+            repository_status
+            and repository_status.scope == "curated"
+            and repository_status.enabled
+        )
+        if cached_issue is None and not is_curated_snapshot:
+            self.fetcher.refresh_repo_issues(repo_full_name)
         issue_stats_map = self._load_issue_stats([repo_full_name])
         scored_repos = [ScoredRepo(repo_full_name=repo_full_name, url=None, fit_score=0, readiness_score=readiness, match_score=readiness, difficulty="", responsiveness=None, activity=None, trend_delta=None, reasons=[], stats=issue_stats_map.get(repo_full_name, IssueStats()))]
         return self._issues_board(repo_full_name, issue_stats_map, scored_repos)
 
     def build_task_bundle(self, repo_full_name: str, issue_identifier: str | int) -> Dict[str, Any]:
-        self.fetcher.refresh_repo_issues(repo_full_name)
         issues = self.db.execute(
             select(RepoIssue).where(RepoIssue.repo_full_name == repo_full_name)
         ).scalars().all()
+        repository_status = self.db.get(RepositoryDataStatus, repo_full_name)
+        is_curated_snapshot = bool(
+            repository_status
+            and repository_status.scope == "curated"
+            and repository_status.enabled
+        )
+        if not issues and not is_curated_snapshot:
+            self.fetcher.refresh_repo_issues(repo_full_name)
+            issues = self.db.execute(
+                select(RepoIssue).where(RepoIssue.repo_full_name == repo_full_name)
+            ).scalars().all()
         target = None
         for issue in issues:
             if str(issue.url) == str(issue_identifier) or str(issue.issue_number) == str(issue_identifier) or str(issue.number) == str(issue_identifier):
@@ -148,7 +168,9 @@ class NewcomerPlanService:
         if not target and issues:
             target = issues[0]
 
-        docs = self.fetcher.refresh_repo_docs(repo_full_name)
+        docs = self.db.get(RepoDoc, (repo_full_name, "README.md"))
+        if docs is None:
+            docs = self.fetcher.refresh_repo_docs(repo_full_name)
         steps = self._build_timeline_for_issue(repo_full_name, docs, target)
         checklist = self._render_issue_checklist(repo_full_name, target, steps)
         return {

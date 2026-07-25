@@ -625,6 +625,10 @@ export default function EcosystemGraph3D({
     setFilters(DEFAULT_FILTERS);
     setMode('structure');
     setLocked(false);
+    setCollapsingIds(new Set());
+    setLoadingNodeId(null);
+    setCameraViewport(null);
+    setLayoutRevision((revision) => revision + 1);
     setNotice('');
     window.setTimeout(() => applyGraphCameraPreset(graphRef, restored.nodes.map((node) => node.id)), 100);
   }, [clearSelections, onSelectedNodeIdChange, onHoveredNodeIdChange]);
